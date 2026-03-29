@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sockervan Companion</title>
+    <meta
+      name="description"
+      content="Lekfull Dexcom-kompis med tamagotchi-kansla, glukosreaktioner, journal och Dexcom G6/G7-koppling."
+    >
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body data-mood="calm">
+    <div class="background-orb orb-one"></div>
+    <div class="background-orb orb-two"></div>
+    <div class="background-orb orb-three"></div>
+
+    <div class="desktop-pet-shell">
+      <div class="desktop-bubble" id="desktopBubble">Sunny håller koll på kurvan.</div>
+      <div class="companion-avatar desktop-pet species-dog mood-calm" id="desktopPet" aria-hidden="true">
+        <div class="pet-shadow"></div>
+        <div class="pet-tail"></div>
+        <div class="pet-body">
+          <div class="pet-belly"></div>
+          <div class="pet-face">
+            <span class="pet-eye left"></span>
+            <span class="pet-eye right"></span>
+            <span class="pet-cheek left"></span>
+            <span class="pet-cheek right"></span>
+            <span class="pet-nose"></span>
+            <span class="pet-mouth"></span>
+            <span class="pet-feature left"></span>
+            <span class="pet-feature right"></span>
+          </div>
+          <div class="pet-foot left"></div>
+          <div class="pet-foot right"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <div class="brand-avatar" id="brandAvatar" aria-hidden="true">🐶</div>
+          <div>
+            <p class="eyebrow">Dexcom companion</p>
+            <h1>Sockervan</h1>
+          </div>
+        </div>
+
+        <div class="unit-toggle" role="tablist" aria-label="Val av enhet">
+          <button class="is-active" data-unit="mmol" type="button">mmol/L</button>
+          <button data-unit="mgdl" type="button">mg/dL</button>
+        </div>
+      </header>
+
+      <div class="hero-strip">
+        <span class="hero-dot"></span>
+        <span id="cloudStatus">Mockad Dexcom-strom aktiv</span>
+        <span class="hero-divider"></span>
+        <span id="heroMood">Sunny mar fint</span>
+      </div>
+
+      <main class="content">
+        <section class="world-panel">
+          <div class="world-header">
+            <div>
+              <p class="eyebrow">Skarmvan</p>
+              <h2 id="buddyName">Sunny</h2>
+            </div>
+            <button class="ghost-button" id="changeBuddyButton" type="button">Byt buddy</button>
+          </div>
+
+          <div class="habitat" id="habitat">
+            <div class="habitat-sun"></div>
+            <div class="habitat-floor"></div>
+
+            <div class="companion-avatar species-dog mood-calm" id="mainCompanion" aria-hidden="true">
+              <div class="pet-shadow"></div>
+              <div class="pet-tail"></div>
+              <div class="pet-body">
+                <div class="pet-belly"></div>
+                <div class="pet-face">
+                  <span class="pet-eye left"></span>
+                  <span class="pet-eye right"></span>
+                  <span class="pet-cheek left"></span>
+                  <span class="pet-cheek right"></span>
+                  <span class="pet-nose"></span>
+                  <span class="pet-mouth"></span>
+                  <span class="pet-feature left"></span>
+                  <span class="pet-feature right"></span>
+                </div>
+                <div class="pet-foot left"></div>
+                <div class="pet-foot right"></div>
+              </div>
+            </div>
+
+            <div class="mood-glass" id="moodBubble">Sunny ar lugn och trygg.</div>
+
+            <div class="chart-frame">
+              <svg viewBox="0 0 320 92" aria-labelledby="chartTitle chartDesc" role="img">
+                <title id="chartTitle">Glukoskurva</title>
+                <desc id="chartDesc">Glukosgraf for senaste timmen.</desc>
+                <path id="trendArea"></path>
+                <path id="trendLine"></path>
+                <g id="trendDots"></g>
+              </svg>
+              <div class="chart-labels">
+                <span id="chartLabelStart">-60 min</span>
+                <span id="chartLabelMid">-30 min</span>
+                <span id="chartLabelEnd">Nu</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="reading-panel">
+          <div>
+            <p class="section-kicker">Nuvarande glukos</p>
+            <div class="reading-row">
+              <div class="reading-main">
+                <span class="reading-number" id="currentValue">5.8</span>
+                <span class="reading-unit" id="currentUnit">mmol/L</span>
+              </div>
+              <span class="trend-pill" id="trendPill">→ Stabil</span>
+            </div>
+            <p class="support-copy" id="readingSummary">
+              Sunny är balanserad och börjar bli mer lekfull efter en fin stund i målområdet.
+            </p>
+          </div>
+
+          <div class="mini-stats">
+            <article>
+              <span>Senast sync</span>
+              <strong id="lastSync">2 min sedan</strong>
+            </article>
+            <article>
+              <span>Zonstreak</span>
+              <strong id="streakValue">55 min</strong>
+            </article>
+          </div>
+        </section>
+
+        <div class="screen-strip">
+          <section class="screen is-active" data-screen="home">
+            <div class="section-heading">
+              <div>
+                <p class="section-kicker">Behov just nu</p>
+                <h3>Hur din buddy reagerar</h3>
+              </div>
+              <button class="ghost-link" data-screen-target="insights" type="button">Se insikter</button>
+            </div>
+
+            <div class="needs-grid">
+              <article class="need-card">
+                <div class="need-topline">
+                  <span>Hjärta</span>
+                  <strong id="heartPct">94%</strong>
+                </div>
+                <div class="meter"><i id="heartBar"></i></div>
+                <p id="heartNote">Stabil rytm när kurvan ligger fint.</p>
+              </article>
+
+              <article class="need-card">
+                <div class="need-topline">
+                  <span>Matro</span>
+                  <strong id="snackPct">88%</strong>
+                </div>
+                <div class="meter"><i id="snackBar"></i></div>
+                <p id="snackNote">Mätt och nöjd utan stresspåslag.</p>
+              </article>
+
+              <article class="need-card">
+                <div class="need-topline">
+                  <span>Vätska</span>
+                  <strong id="waterPct">92%</strong>
+                </div>
+                <div class="meter"><i id="waterBar"></i></div>
+                <p id="waterNote">God ork och ingen törstig känsla.</p>
+              </article>
+            </div>
+
+            <div class="callout-panel">
+              <div>
+                <p class="section-kicker">Companion insight</p>
+                <h3 id="companionInsightTitle">När värdena håller sig fina börjar din buddy leka.</h3>
+                <p id="companionInsightBody">
+                  Efter 30 minuter i målområdet blir humöret lättare. Efter 60 minuter kommer det riktiga glittret.
+                </p>
+              </div>
+              <button class="secondary-button" data-screen-target="journal" type="button">Se dagens logg</button>
+            </div>
+
+            <div class="action-grid">
+              <button class="soft-action" data-quick-action="meal" type="button">
+                <span class="soft-icon">🍽</span>
+                Logga maltid
+              </button>
+              <button class="soft-action" data-quick-action="insulin" type="button">
+                <span class="soft-icon">💉</span>
+                Logga insulin
+              </button>
+              <button class="soft-action" data-quick-action="walk" type="button">
+                <span class="soft-icon">🚶</span>
+                Logga promenad
+              </button>
+            </div>
+          </section>
+
+          <section class="screen" data-screen="journal">
+            <div class="section-heading">
+              <div>
+                <p class="section-kicker">24h journal</p>
+                <h3>Det som formade dagen</h3>
+              </div>
+              <button class="ghost-link" data-screen-target="home" type="button">Till hem</button>
+            </div>
+
+            <div class="timeline" id="timeline"></div>
+          </section>
+
+          <section class="screen" data-screen="insights">
+            <div class="section-heading">
+              <div>
+                <p class="section-kicker">Insikter</p>
+                <h3>Balans med personlighet</h3>
+              </div>
+            </div>
+
+            <div class="insight-hero">
+              <div class="ring-card">
+                <div class="ring" id="tirRing">
+                  <div class="ring-center">
+                    <strong id="tirValue">78%</strong>
+                    <span>In range</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="metric-grid">
+                <article class="metric-card">
+                  <span>Snitt</span>
+                  <strong id="avgValue">114 mg/dL</strong>
+                </article>
+                <article class="metric-card">
+                  <span>GMI</span>
+                  <strong id="gmiValue">6.2%</strong>
+                </article>
+                <article class="metric-card">
+                  <span>Std.avvik</span>
+                  <strong id="stdDevValue">24</strong>
+                </article>
+                <article class="metric-card">
+                  <span>Starkaste streak</span>
+                  <strong id="bestStreak">85 min</strong>
+                </article>
+              </div>
+            </div>
+
+            <div class="state-stack">
+              <article class="state-panel high">
+                <span>Hogt</span>
+                <strong id="highValue">12%</strong>
+                <p>När det blir hogt blir kompisen trott och törstig.</p>
+              </article>
+              <article class="state-panel in-range">
+                <span>I mal</span>
+                <strong id="inRangeValue">78%</strong>
+                <p>Nar det ligger fint blir humoret stadigt och lekfullt.</p>
+              </article>
+              <article class="state-panel low">
+                <span>Lagt</span>
+                <strong id="lowValue">10%</strong>
+                <p>Vid laga varden blir kompisen skakig och vill ha snabb hjalp.</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="screen" data-screen="profile">
+            <div class="section-heading">
+              <div>
+                <p class="section-kicker">Profil och koppling</p>
+                <h3>Dexcom och companion</h3>
+              </div>
+            </div>
+
+            <div class="profile-card">
+              <div class="profile-buddy">
+                <div class="profile-emoji" id="profileEmoji">🐶</div>
+                <div>
+                  <strong id="profileBuddyName">Sunny</strong>
+                  <p id="profileBuddySpecies">Golden buddy</p>
+                </div>
+              </div>
+              <button class="secondary-button" id="profileChangeBuddy" type="button">Byt buddy</button>
+            </div>
+
+            <div class="connect-card" id="connectCard">
+              <div class="connect-topline">
+                <strong>Dexcom-lage</strong>
+                <div class="mode-switch" role="tablist" aria-label="Välj dataläge">
+                  <button class="is-active" data-mode="mock" type="button">Demo</button>
+                  <button data-mode="live" type="button">Dexcom</button>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <label>
+                  <span>Region</span>
+                  <select id="regionSelect">
+                    <option value="EU">EU</option>
+                    <option value="US">US</option>
+                    <option value="JP">JP</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Miljo</span>
+                  <select id="environmentSelect">
+                    <option value="sandbox">Sandbox</option>
+                    <option value="production">Production</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Client ID</span>
+                  <input id="clientIdInput" type="text" placeholder="Dexcom app client_id">
+                </label>
+
+                <label>
+                  <span>Redirect URI</span>
+                  <input id="redirectUriInput" type="text" placeholder="https://din-app.se/auth/dexcom/callback">
+                </label>
+
+                <label>
+                  <span>Backend URL</span>
+                  <input id="backendUrlInput" type="text" placeholder="https://din-backend.se">
+                </label>
+              </div>
+
+              <div class="integration-actions">
+                <button class="primary-button compact" id="buildAuthButton" type="button">Bygg OAuth-lank</button>
+                <button class="secondary-button compact" id="copyAuthButton" type="button">Kopiera lank</button>
+              </div>
+
+              <p class="integration-summary" id="integrationSummary">
+                Demo-lage visar en mockad strom och later dig justera humörlogiken innan riktig Dexcom-koppling finns.
+              </p>
+              <pre class="auth-preview" id="authPreview">Lägg in Client ID och Redirect URI för att skapa en OAuth-länk.</pre>
+            </div>
+
+            <div class="info-stack">
+              <article class="info-card">
+                <strong>Direkt från officiella Dexcom API</strong>
+                <p>
+                  Dexcom V3 stoder G6 och G7. EU och Sverige bor kopplas via <code>api.dexcom.eu</code>,
+                  medan sandbox använder <code>sandbox-api.dexcom.com</code>.
+                </p>
+              </article>
+              <article class="info-card">
+                <strong>Viktigt for riktig lansering</strong>
+                <p>
+                  Dexcom vill att tokens lagras serverside. Frontend-only ar bra for prototypen, men riktig inloggning
+                  bor ga via backend eller desktop-wrapper.
+                </p>
+              </article>
+              <article class="info-card">
+                <strong>Sandlåde-test</strong>
+                <p id="sandboxHint">
+                  For G7-test i sandbox rekommenderas kontot <code>SandboxUser7</code> enligt Dexcoms dokumentation.
+                </p>
+              </article>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <div class="quick-actions" id="quickActions" aria-hidden="true">
+        <button class="quick-item" data-quick-action="meal" type="button">+ Måltid</button>
+        <button class="quick-item" data-quick-action="insulin" type="button">+ Insulin</button>
+        <button class="quick-item" data-quick-action="walk" type="button">+ Promenad</button>
+        <button class="quick-item" data-quick-action="water" type="button">+ Vatten</button>
+      </div>
+
+      <button class="fab" id="fabButton" type="button" aria-label="Snabbmeny">+</button>
+
+      <nav class="bottom-nav" aria-label="Huvudnavigation">
+        <button class="nav-button is-active" data-screen-target="home" type="button">Hem</button>
+        <button class="nav-button" data-screen-target="journal" type="button">Journal</button>
+        <button class="nav-button" data-screen-target="insights" type="button">Insikter</button>
+        <button class="nav-button" data-screen-target="profile" type="button">Profil</button>
+      </nav>
+    </div>
+
+    <section class="onboarding" id="onboarding" aria-labelledby="onboardingTitle">
+      <div class="onboarding-panel">
+        <p class="eyebrow">Living companion</p>
+        <h2 id="onboardingTitle">Valj din foljeslagare</h2>
+        <p class="onboarding-copy">
+          Din buddy lever i skarmen, reagerar pa glukoset och blir gladare ju langre du ligger stabilt.
+        </p>
+
+        <div class="companion-grid">
+          <button class="companion-choice is-selected" data-companion="sunny" type="button">
+            <span class="choice-art">🐶</span>
+            <strong>Sunny</strong>
+            <span>Golden buddy</span>
+          </button>
+          <button class="companion-choice" data-companion="mochi" type="button">
+            <span class="choice-art">🐱</span>
+            <strong>Mochi</strong>
+            <span>Calico cat</span>
+          </button>
+          <button class="companion-choice" data-companion="pickle" type="button">
+            <span class="choice-art">🦕</span>
+            <strong>Pickle</strong>
+            <span>Green dino</span>
+          </button>
+          <button class="companion-choice" data-companion="pingo" type="button">
+            <span class="choice-art">🐧</span>
+            <strong>Pingo</strong>
+            <span>Penguin pal</span>
+          </button>
+        </div>
+
+        <button class="primary-button wide" id="confirmCompanion" type="button">Starta med Sunny</button>
+        <p class="foot-note">Du kan alltid byta buddy senare under Profil.</p>
+      </div>
+    </section>
+  </body>
+</html>
