@@ -860,6 +860,7 @@ pre {
   pointer-events: none;
   transition: opacity 260ms ease;
   z-index: 4;
+  overflow-y: auto;
 }
 
 .onboarding.is-visible {
@@ -873,6 +874,9 @@ pre {
   border-radius: 42px;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 24px 60px rgba(37, 28, 37, 0.12);
+  max-height: calc(100svh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .onboarding-copy,
@@ -883,7 +887,7 @@ pre {
 
 .companion-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
   margin: 26px 0;
 }
@@ -921,6 +925,34 @@ pre {
   font-size: 3rem;
   box-shadow: 0 20px 34px rgba(255, 145, 190, 0.18);
   will-change: transform;
+}
+
+@media (max-height: 920px) {
+  .onboarding {
+    place-items: start center;
+    padding: 16px;
+  }
+
+  .onboarding-panel {
+    padding: 24px;
+    max-height: calc(100svh - 24px);
+  }
+
+  .companion-grid {
+    gap: 12px;
+    margin: 18px 0;
+  }
+
+  .companion-choice {
+    padding: 16px 14px;
+    gap: 10px;
+  }
+
+  .choice-art {
+    width: 82px;
+    height: 82px;
+    font-size: 2.5rem;
+  }
 }
 
 .desktop-pet-shell {
