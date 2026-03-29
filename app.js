@@ -55,6 +55,7 @@ const state = {
   }),
   motion: {
     scrollY: window.scrollY || 0,
+    overlayScrollY: 0,
     scrollImpulse: 0,
   },
 };
@@ -70,6 +71,7 @@ for (let index = 0; index < 12; index += 1) {
 const elements = {
   body: document.body,
   onboarding: document.getElementById("onboarding"),
+  onboardingPanel: document.querySelector(".onboarding-panel"),
   confirmCompanion: document.getElementById("confirmCompanion"),
   choiceButtons: Array.from(document.querySelectorAll(".companion-choice")),
   choiceArts: Array.from(document.querySelectorAll(".choice-art")),
@@ -453,6 +455,10 @@ function renderCompanion() {
 
 function showOnboarding(visible) {
   elements.onboarding.classList.toggle("is-visible", visible);
+  elements.body.classList.toggle("onboarding-open", visible);
+  if (visible) {
+    state.motion.overlayScrollY = elements.onboarding.scrollTop || 0;
+  }
 }
 
 function selectCompanion(key) {
@@ -573,6 +579,13 @@ function updateScrollMotion() {
   state.motion.scrollImpulse = clamp(state.motion.scrollImpulse + delta * 0.22, -24, 24);
 }
 
+function updateOverlayScrollMotion() {
+  const nextY = elements.onboarding.scrollTop || 0;
+  const delta = nextY - state.motion.overlayScrollY;
+  state.motion.overlayScrollY = nextY;
+  state.motion.scrollImpulse = clamp(state.motion.scrollImpulse + delta * 0.22, -24, 24);
+}
+
 function animateScene(now) {
   const speedMap = { calm: 0.32, playful: 0.56, sparkly: 0.72, sleepy: 0.18, weak: 0.12, cautious: 0.42 };
   const currentMood = document.body.dataset.mood || "calm";
@@ -580,6 +593,8 @@ function animateScene(now) {
   const maxPosition = Math.max(18, window.innerWidth - 280);
   const sceneTime = now / 1000;
   const scrollWave = state.motion.scrollImpulse;
+  const onboardingVisible = elements.onboarding.classList.contains("is-visible");
+  const choiceBoost = onboardingVisible ? 1.45 : 1;
 
   desktopPosition += desktopDirection * speed;
   if (desktopPosition >= maxPosition || desktopPosition <= 18) desktopDirection *= -1;
@@ -616,7 +631,7 @@ function animateScene(now) {
     const tilt = Math.sin(sceneTime * 2.6 + phase) * 1.5 + scrollWave * (index % 2 === 0 ? 0.05 : -0.05);
     const lift = isSelected ? -6 : 0;
     button.style.transform =
-      `translateY(${(lift + bob * 0.28 - scrollWave * 0.08).toFixed(2)}px) rotate(${tilt.toFixed(2)}deg)`;
+      `translateY(${(lift + bob * 0.28 * choiceBoost - scrollWave * 0.1).toFixed(2)}px) rotate(${(tilt * choiceBoost).toFixed(2)}deg)`;
   });
 
   elements.choiceArts.forEach((art, index) => {
@@ -625,7 +640,7 @@ function animateScene(now) {
     const twist = Math.sin(sceneTime * 2.7 + phase) * 4.6;
     const scale = 1 + Math.sin(sceneTime * 2.1 + phase) * 0.035;
     art.style.transform =
-      `translateY(${bounce.toFixed(2)}px) rotate(${twist.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+      `translateY(${(bounce * choiceBoost).toFixed(2)}px) rotate(${(twist * choiceBoost).toFixed(2)}deg) scale(${(scale + (choiceBoost - 1) * 0.04).toFixed(3)})`;
   });
 
   window.requestAnimationFrame(animateScene);
@@ -718,6 +733,7 @@ function bindEvents() {
   });
 
   window.addEventListener("scroll", updateScrollMotion, { passive: true });
+  elements.onboarding.addEventListener("scroll", updateOverlayScrollMotion, { passive: true });
   window.addEventListener("resize", () => {
     desktopPosition = clamp(desktopPosition, 18, Math.max(18, window.innerWidth - 280));
   });
