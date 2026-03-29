@@ -70,6 +70,9 @@ const state = {
     overlayScrollY: 0,
     scrollImpulse: 0,
   },
+  bridge: {
+    lastSyncAt: 0,
+  },
 };
 
 for (let index = 0; index < 12; index += 1) {
@@ -553,16 +556,26 @@ function showAuthGate(visible) {
 
 function updateAuthGate() {
   const companion = companions[state.selectedCompanion];
+  const backendBase = getBackendBaseUrl();
   elements.authBuddyEmoji.textContent = companion.emoji;
   elements.authBuddyName.textContent = companion.name;
   elements.authBuddySubtitle.textContent = companion.subtitle;
-  elements.authDexcomButton.textContent = state.dexcom.clientId ? "Oppna Dexcoms login" : "Forbered Dexcom-login";
+  elements.authDexcomButton.textContent = backendBase || state.dexcom.clientId ? "Oppna Dexcoms login" : "Forbered Dexcom-login";
 
   if (state.auth.status === "authorized") {
     elements.authGateMessage.textContent =
       `${companion.name} ar redo. Dexcom-handoff ar klar och du kan ga tillbaka till grafen med samma figur ovanfor kurvan.`;
+    elements.authGateStatus.textContent = backendBase
+      ? "Dexcom-bridgen ar kopplad och kan nu hamta live-varden direkt till dashboarden."
+      : "Authorization code kom tillbaka till appen. For riktigt token-utbyte och livevardeshamtning behovs fortfarande backend enligt Dexcoms dokumentation.";
+    return;
+  }
+
+  if (backendBase) {
+    elements.authGateMessage.textContent =
+      `${companion.name} foljer med direkt fran valrutan hit. Enklast laget ar att logga in via den inbyggda bridgen och sedan lasa in riktiga Dexcom-varden.`;
     elements.authGateStatus.textContent =
-      "Authorization code kom tillbaka till appen. For riktigt token-utbyte och livevardeshamtning behovs fortfarande backend enligt Dexcoms dokumentation.";
+      "Efter klick skickas du till Dexcoms officiella login, medan bridgen skoter tokenhantering och datalasning pa serversidan.";
     return;
   }
 
@@ -646,6 +659,43 @@ function getCurrentRedirectUrl() {
   return `${window.location.origin}${window.location.pathname}`;
 }
 
+function normalizeBaseUrl(value) {
+  return (value || "").trim().replace(/\/+$/, "");
+}
+
+function getBackendBaseUrl() {
+  const configured = normalizeBaseUrl(state.dexcom.backendUrl);
+  if (configured) return configured;
+  if (/github\.io$/i.test(window.location.hostname)) return "";
+  if (!window.location.origin || window.location.origin === "null") return "";
+  return normalizeBaseUrl(window.location.origin);
+}
+
+function hasBackendBridge() {
+  return Boolean(getBackendBaseUrl());
+}
+
+function buildBridgeUrl(path, params = {}) {
+  const baseUrl = getBackendBaseUrl();
+  if (!baseUrl) return "";
+  const url = new URL(path.replace(/^\//, ""), `${baseUrl}/`);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, value);
+    }
+  });
+  return url.toString();
+}
+
+function buildDexcomStartUrl() {
+  if (!hasBackendBridge()) return "";
+  return buildBridgeUrl("/auth/dexcom/start", {
+    frontend: getCurrentRedirectUrl(),
+    region: state.dexcom.region,
+    environment: state.dexcom.environment,
+  });
+}
+
 function buildDexcomAuthUrl() {
   const { clientId, redirectUri, region, environment } = state.dexcom;
   const resolvedRedirectUri = redirectUri || getCurrentRedirectUrl();
@@ -660,7 +710,76 @@ function buildDexcomAuthUrl() {
   return `${resolveDexcomBase(region, environment)}/v3/oauth2/login?${params.toString()}`;
 }
 
+async function fetchBridgeJson(path, params = {}) {
+  const url = buildBridgeUrl(path, params);
+  if (!url) throw new Error("Ingen backend-bridge ar konfigurerad.");
+  const response = await fetch(url, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || "Dexcom-bridge svarade med fel.");
+  }
+  return payload;
+}
+
+function applyDexcomSummary(payload) {
+  if (!payload || !Array.isArray(payload.records) || !payload.records.length) return false;
+  const mapped = payload.records
+    .map((record) => ({
+      value: Number(record.value),
+      time: new Date(record.displayTime || record.systemTime || Date.now()),
+    }))
+    .filter((record) => Number.isFinite(record.value) && !Number.isNaN(record.time.getTime()))
+    .sort((left, right) => left.time.getTime() - right.time.getTime());
+
+  if (!mapped.length) return false;
+  state.dailyWindow = mapped.slice(-48);
+  state.readings = mapped.slice(-12);
+  state.bridge.lastSyncAt = Date.now();
+  state.dexcom.mode = "live";
+  state.auth.status = "authorized";
+  state.auth.lastProvider = "dexcom";
+  saveAuthState();
+  storage.set("sockervan-dexcom", state.dexcom);
+  return true;
+}
+
+async function syncDexcomFromBridge({ silent = false } = {}) {
+  if (!hasBackendBridge()) return false;
+  try {
+    const payload = await fetchBridgeJson("/api/dexcom/summary", {
+      hours: 24,
+      region: state.dexcom.region,
+      environment: state.dexcom.environment,
+    });
+    const applied = applyDexcomSummary(payload);
+    if (!applied) {
+      if (!silent) {
+        elements.integrationSummary.textContent =
+          "Bridge-kopplingen finns, men det kom inga Dexcom-varden tillbaka an.";
+      }
+      return false;
+    }
+    renderCompanion();
+    renderDexcomPanel();
+    if (!silent) {
+      elements.integrationSummary.textContent =
+        "Live-varden laddades via den inbyggda Dexcom-bridgen.";
+    }
+    return true;
+  } catch (error) {
+    if (!silent) {
+      elements.integrationSummary.textContent =
+        `${error.message || "Dexcom-bridge kunde inte hamta live-varden just nu."}`;
+    }
+    return false;
+  }
+}
+
 function renderDexcomPanel() {
+  const backendBase = getBackendBaseUrl();
   elements.regionSelect.value = state.dexcom.region;
   elements.environmentSelect.value = state.dexcom.environment;
   elements.clientIdInput.value = state.dexcom.clientId;
@@ -669,15 +788,21 @@ function renderDexcomPanel() {
   elements.modeButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.mode === state.dexcom.mode);
   });
-  elements.authPreview.textContent = buildDexcomAuthUrl();
+  elements.authPreview.textContent = backendBase ? buildDexcomStartUrl() : buildDexcomAuthUrl();
 
   if (state.dexcom.mode === "mock") {
     elements.integrationSummary.textContent = "Demo-läge visar en mockad Dexcom-ström och låter dig trimma buddy-reaktionerna utan att logga in.";
     elements.cloudStatus.textContent = state.auth.status === "demo" ? "Demo-lage aktivt" : "Mockad Dexcom-strom aktiv";
   } else {
     const regionLabel = state.dexcom.environment === "sandbox" ? "Sandbox" : state.dexcom.region;
-    elements.integrationSummary.textContent = `Dexcom ${regionLabel} är valt. Riktig inloggning bör skickas via backend eftersom Dexcom vill ha tokens lagrade på servern.`;
-    elements.cloudStatus.textContent = state.auth.status === "authorized" ? `Dexcom ${regionLabel} handoff klar` : `Dexcom ${regionLabel} forberedd`;
+    if (backendBase) {
+      elements.integrationSummary.textContent = `Dexcom ${regionLabel} ar valt. Enklast laget ar den inbyggda bridgen som gor login och tokenhantering pa serversidan.`;
+      elements.cloudStatus.textContent =
+        state.auth.status === "authorized" ? `Dexcom ${regionLabel} live via bridge` : `Dexcom ${regionLabel} bridge redo`;
+    } else {
+      elements.integrationSummary.textContent = `Dexcom ${regionLabel} är valt. Riktig inloggning bör skickas via backend eftersom Dexcom vill ha tokens lagrade på servern.`;
+      elements.cloudStatus.textContent = state.auth.status === "authorized" ? `Dexcom ${regionLabel} handoff klar` : `Dexcom ${regionLabel} forberedd`;
+    }
   }
 
   if (state.dexcom.environment === "sandbox") {
@@ -700,6 +825,18 @@ function handleDexcomReturn() {
   const url = new URL(window.location.href);
   const code = url.searchParams.get("code");
   const oauthError = url.searchParams.get("error");
+  const bridgeStatus = url.searchParams.get("dexcom");
+  const bridgeError = url.searchParams.get("dexcom_error");
+
+  if (bridgeStatus === "connected") {
+    state.auth.status = "authorized";
+    state.auth.lastProvider = "dexcom";
+    state.dexcom.mode = "live";
+    saveAuthState();
+    storage.set("sockervan-dexcom", state.dexcom);
+    window.history.replaceState({}, document.title, getCurrentRedirectUrl());
+    return;
+  }
 
   if (code) {
     state.auth.status = "authorized";
@@ -716,6 +853,14 @@ function handleDexcomReturn() {
     state.auth.lastProvider = "dexcom";
     saveAuthState();
     window.history.replaceState({}, document.title, getCurrentRedirectUrl());
+    return;
+  }
+
+  if (bridgeError) {
+    state.auth.status = "locked";
+    state.auth.lastProvider = "dexcom";
+    saveAuthState();
+    window.history.replaceState({}, document.title, getCurrentRedirectUrl());
   }
 }
 
@@ -728,6 +873,16 @@ function stepSimulation() {
   state.dailyWindow.push({ value: nextValue, time: new Date() });
   state.dailyWindow = state.dailyWindow.slice(-48);
   renderCompanion();
+}
+
+async function maybeRefreshDexcomBridge() {
+  if (!(state.dexcom.mode === "live" && state.auth.status === "authorized" && hasBackendBridge())) {
+    stepSimulation();
+    return;
+  }
+  const now = Date.now();
+  if (now - state.bridge.lastSyncAt < 60000) return;
+  await syncDexcomFromBridge({ silent: true });
 }
 
 let desktopPosition = 18;
@@ -856,8 +1011,8 @@ function bindEvents() {
   });
 
   elements.authDexcomButton.addEventListener("click", () => {
-    const authUrl = buildDexcomAuthUrl();
-    if (!state.dexcom.clientId) {
+    const authUrl = hasBackendBridge() ? buildDexcomStartUrl() : buildDexcomAuthUrl();
+    if (!hasBackendBridge() && !state.dexcom.clientId) {
       elements.authGateStatus.textContent =
         "Fyll i Dexcom Client ID under Profil for att kunna starta Dexcom-login. Redirect URI kan vara denna Pages-URL om den ar registrerad.";
       showAuthGate(false);
@@ -924,11 +1079,11 @@ function bindEvents() {
   });
 
   elements.buildAuthButton.addEventListener("click", () => {
-    elements.authPreview.textContent = buildDexcomAuthUrl();
+    elements.authPreview.textContent = hasBackendBridge() ? buildDexcomStartUrl() : buildDexcomAuthUrl();
   });
 
   elements.copyAuthButton.addEventListener("click", async () => {
-    const link = buildDexcomAuthUrl();
+    const link = hasBackendBridge() ? buildDexcomStartUrl() : buildDexcomAuthUrl();
     try {
       await navigator.clipboard.writeText(link);
       elements.integrationSummary.textContent = "OAuth-länken är kopierad till urklipp.";
@@ -952,7 +1107,7 @@ function bindEvents() {
   });
 }
 
-function init() {
+async function init() {
   handleDexcomReturn();
   elements.unitButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.unit === state.unit);
@@ -963,7 +1118,12 @@ function init() {
   showOnboarding(state.showOnboarding);
   showAuthGate(!state.showOnboarding && state.auth.status === "locked");
   bindEvents();
-  window.setInterval(stepSimulation, 6000);
+  if (state.dexcom.mode === "live" && state.auth.status === "authorized" && hasBackendBridge()) {
+    await syncDexcomFromBridge({ silent: true });
+  }
+  window.setInterval(() => {
+    maybeRefreshDexcomBridge();
+  }, 6000);
   window.requestAnimationFrame(animateScene);
 }
 

@@ -1,0 +1,16 @@
+{
+  "name": "sugarbuddy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Playful Dexcom companion with a small built-in backend bridge.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2"
+  }
+}
