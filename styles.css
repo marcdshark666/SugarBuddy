@@ -355,6 +355,7 @@ pre {
   font-size: 0.98rem;
   font-weight: 600;
   color: var(--secondary);
+  will-change: transform;
 }
 
 .chart-frame {
@@ -888,6 +889,7 @@ pre {
 }
 
 .companion-choice {
+  position: relative;
   display: grid;
   gap: 12px;
   justify-items: center;
@@ -896,12 +898,17 @@ pre {
   background: rgba(255, 255, 255, 0.7);
   text-align: center;
   transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  will-change: transform;
 }
 
 .companion-choice.is-selected {
   background: linear-gradient(180deg, rgba(255, 236, 246, 0.96), rgba(255, 255, 255, 0.9));
   box-shadow: 0 18px 36px rgba(180, 0, 101, 0.12);
   transform: translateY(-4px);
+}
+
+.companion-choice:hover {
+  box-shadow: 0 22px 40px rgba(180, 0, 101, 0.1);
 }
 
 .choice-art {
@@ -912,6 +919,8 @@ pre {
   border-radius: 30px;
   background: linear-gradient(135deg, rgba(255, 220, 236, 0.92), rgba(255, 244, 230, 0.92));
   font-size: 3rem;
+  box-shadow: 0 20px 34px rgba(255, 145, 190, 0.18);
+  will-change: transform;
 }
 
 .desktop-pet-shell {
@@ -923,6 +932,7 @@ pre {
   align-items: end;
   gap: 12px;
   pointer-events: none;
+  will-change: transform;
 }
 
 .desktop-bubble {
@@ -946,6 +956,7 @@ pre {
   width: var(--pet-size);
   height: calc(var(--pet-size) + 18px);
   transform: translateX(-50%);
+  will-change: transform;
 }
 
 .desktop-pet {
@@ -965,6 +976,7 @@ pre {
   border-radius: 50%;
   background: rgba(22, 20, 24, 0.12);
   filter: blur(6px);
+  will-change: transform;
 }
 
 .pet-tail {

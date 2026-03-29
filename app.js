@@ -53,6 +53,10 @@ const state = {
     redirectUri: "",
     backendUrl: "",
   }),
+  motion: {
+    scrollY: window.scrollY || 0,
+    scrollImpulse: 0,
+  },
 };
 
 for (let index = 0; index < 12; index += 1) {
@@ -68,12 +72,16 @@ const elements = {
   onboarding: document.getElementById("onboarding"),
   confirmCompanion: document.getElementById("confirmCompanion"),
   choiceButtons: Array.from(document.querySelectorAll(".companion-choice")),
+  choiceArts: Array.from(document.querySelectorAll(".choice-art")),
   changeBuddyButton: document.getElementById("changeBuddyButton"),
   profileChangeBuddy: document.getElementById("profileChangeBuddy"),
   mainCompanion: document.getElementById("mainCompanion"),
   desktopPet: document.getElementById("desktopPet"),
+  desktopShell: document.querySelector(".desktop-pet-shell"),
   moodBubble: document.getElementById("moodBubble"),
   desktopBubble: document.getElementById("desktopBubble"),
+  mainShadow: document.querySelector("#mainCompanion .pet-shadow"),
+  desktopShadow: document.querySelector("#desktopPet .pet-shadow"),
   brandAvatar: document.getElementById("brandAvatar"),
   buddyName: document.getElementById("buddyName"),
   profileEmoji: document.getElementById("profileEmoji"),
@@ -558,16 +566,69 @@ function stepSimulation() {
 
 let desktopPosition = 18;
 let desktopDirection = 1;
-function animateDesktopPet() {
+function updateScrollMotion() {
+  const nextY = window.scrollY || window.pageYOffset || 0;
+  const delta = nextY - state.motion.scrollY;
+  state.motion.scrollY = nextY;
+  state.motion.scrollImpulse = clamp(state.motion.scrollImpulse + delta * 0.22, -24, 24);
+}
+
+function animateScene(now) {
   const speedMap = { calm: 0.32, playful: 0.56, sparkly: 0.72, sleepy: 0.18, weak: 0.12, cautious: 0.42 };
   const currentMood = document.body.dataset.mood || "calm";
   const speed = speedMap[currentMood] || 0.32;
   const maxPosition = Math.max(18, window.innerWidth - 280);
+  const sceneTime = now / 1000;
+  const scrollWave = state.motion.scrollImpulse;
+
   desktopPosition += desktopDirection * speed;
   if (desktopPosition >= maxPosition || desktopPosition <= 18) desktopDirection *= -1;
-  const shell = document.querySelector(".desktop-pet-shell");
-  shell.style.transform = `translateX(${desktopPosition}px)`;
-  window.requestAnimationFrame(animateDesktopPet);
+  state.motion.scrollImpulse *= 0.88;
+
+  const mainBob = Math.sin(sceneTime * 3) * 5 + Math.cos(sceneTime * 1.8) * 1.6;
+  const mainLift = -scrollWave * 0.6;
+  const mainTilt = Math.sin(sceneTime * 2.1) * 1.6 + scrollWave * 0.28;
+  elements.mainCompanion.style.transform =
+    `translateX(-50%) translateY(${(mainBob + mainLift).toFixed(2)}px) rotate(${mainTilt.toFixed(2)}deg)`;
+  elements.moodBubble.style.transform =
+    `translateX(-50%) translateY(${(Math.sin(sceneTime * 2.5 + 0.3) * 2.5 - scrollWave * 0.16).toFixed(2)}px)`;
+
+  if (elements.mainShadow) {
+    const mainShadowScale = 1 - (mainBob + mainLift) / 80 + Math.abs(scrollWave) * 0.006;
+    elements.mainShadow.style.transform = `scaleX(${mainShadowScale.toFixed(3)})`;
+  }
+
+  if (elements.desktopShell) {
+    const desktopBob = Math.sin(sceneTime * 3.2 + 0.6) * 4 + Math.cos(sceneTime * 2.2) * 1.4;
+    const desktopTilt = Math.sin(sceneTime * 2.8) * 1.8 + scrollWave * 0.16;
+    elements.desktopShell.style.transform =
+      `translate3d(${desktopPosition.toFixed(2)}px, ${(desktopBob - scrollWave * 0.24).toFixed(2)}px, 0) rotate(${desktopTilt.toFixed(2)}deg)`;
+    if (elements.desktopShadow) {
+      const desktopShadowScale = 1 - desktopBob / 95 + Math.abs(scrollWave) * 0.004;
+      elements.desktopShadow.style.transform = `scaleX(${desktopShadowScale.toFixed(3)})`;
+    }
+  }
+
+  elements.choiceButtons.forEach((button, index) => {
+    const isSelected = button.dataset.companion === state.selectedCompanion;
+    const phase = index * 0.85;
+    const bob = Math.sin(sceneTime * 3.4 + phase) * 5.5 + Math.cos(sceneTime * 1.9 + phase) * 1.4;
+    const tilt = Math.sin(sceneTime * 2.6 + phase) * 1.5 + scrollWave * (index % 2 === 0 ? 0.05 : -0.05);
+    const lift = isSelected ? -6 : 0;
+    button.style.transform =
+      `translateY(${(lift + bob * 0.28 - scrollWave * 0.08).toFixed(2)}px) rotate(${tilt.toFixed(2)}deg)`;
+  });
+
+  elements.choiceArts.forEach((art, index) => {
+    const phase = index * 0.8;
+    const bounce = Math.sin(sceneTime * 3.8 + phase) * 6 + Math.cos(sceneTime * 2.3 + phase) * 2;
+    const twist = Math.sin(sceneTime * 2.7 + phase) * 4.6;
+    const scale = 1 + Math.sin(sceneTime * 2.1 + phase) * 0.035;
+    art.style.transform =
+      `translateY(${bounce.toFixed(2)}px) rotate(${twist.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
+  });
+
+  window.requestAnimationFrame(animateScene);
 }
 
 function bindEvents() {
@@ -655,6 +716,11 @@ function bindEvents() {
     const clickedInside = event.target.closest(".fab, .quick-actions, .soft-action");
     if (!clickedInside && state.quickOpen) toggleQuickActions(false);
   });
+
+  window.addEventListener("scroll", updateScrollMotion, { passive: true });
+  window.addEventListener("resize", () => {
+    desktopPosition = clamp(desktopPosition, 18, Math.max(18, window.innerWidth - 280));
+  });
 }
 
 function init() {
@@ -667,7 +733,7 @@ function init() {
   showOnboarding(state.showOnboarding);
   bindEvents();
   window.setInterval(stepSimulation, 6000);
-  window.requestAnimationFrame(animateDesktopPet);
+  window.requestAnimationFrame(animateScene);
 }
 
 init();
