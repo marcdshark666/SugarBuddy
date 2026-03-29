@@ -23,6 +23,14 @@ const companions = {
   pingo: { name: "Pingo", species: "species-penguin", emoji: "🐧", subtitle: "Penguin pal" },
 };
 
+const GLUCOSE_RULES = {
+  lowSleepyMax: 72,
+  targetMin: 81,
+  targetMax: 126,
+  highSadMin: 135,
+  veryHighMin: 216,
+};
+
 const daySeed = [
   104, 98, 95, 92, 88, 93, 101, 114, 126, 132, 146, 158,
   171, 186, 204, 212, 198, 183, 169, 155, 141, 129, 118, 110,
@@ -53,6 +61,10 @@ const state = {
     redirectUri: "",
     backendUrl: "",
   }),
+  auth: storage.get("sockervan-auth", {
+    status: "locked",
+    lastProvider: "demo",
+  }),
   motion: {
     scrollY: window.scrollY || 0,
     overlayScrollY: 0,
@@ -72,6 +84,7 @@ const elements = {
   body: document.body,
   onboarding: document.getElementById("onboarding"),
   onboardingPanel: document.querySelector(".onboarding-panel"),
+  authGate: document.getElementById("authGate"),
   confirmCompanion: document.getElementById("confirmCompanion"),
   choiceButtons: Array.from(document.querySelectorAll(".companion-choice")),
   choiceArts: Array.from(document.querySelectorAll(".choice-art")),
@@ -141,6 +154,15 @@ const elements = {
   backendUrlInput: document.getElementById("backendUrlInput"),
   buildAuthButton: document.getElementById("buildAuthButton"),
   copyAuthButton: document.getElementById("copyAuthButton"),
+  authBuddyEmoji: document.getElementById("authBuddyEmoji"),
+  authBuddyName: document.getElementById("authBuddyName"),
+  authBuddySubtitle: document.getElementById("authBuddySubtitle"),
+  authGateMessage: document.getElementById("authGateMessage"),
+  authGateStatus: document.getElementById("authGateStatus"),
+  authDexcomButton: document.getElementById("authDexcomButton"),
+  authDemoButton: document.getElementById("authDemoButton"),
+  authBackButton: document.getElementById("authBackButton"),
+  authSetupButton: document.getElementById("authSetupButton"),
 };
 
 function clamp(value, min, max) {
@@ -177,7 +199,7 @@ function computeStreak(readings) {
   let count = 0;
   for (let index = readings.length - 1; index >= 0; index -= 1) {
     const value = readings[index].value;
-    if (value >= 70 && value <= 180) {
+    if (value >= GLUCOSE_RULES.targetMin && value <= GLUCOSE_RULES.targetMax) {
       count += 1;
     } else {
       break;
@@ -190,7 +212,7 @@ function computeBestStreak(values) {
   let best = 0;
   let current = 0;
   values.forEach((value) => {
-    if (value >= 70 && value <= 180) {
+    if (value >= GLUCOSE_RULES.targetMin && value <= GLUCOSE_RULES.targetMax) {
       current += 30;
       best = Math.max(best, current);
     } else {
@@ -201,60 +223,91 @@ function computeBestStreak(values) {
 }
 
 function getMoodState(reading, trend, streakMinutes) {
-  if (reading.value < 70) {
+  if (reading.value < GLUCOSE_RULES.lowSleepyMax) {
     return {
-      mood: "weak",
+      statusKey: "low",
+      moodClass: "sleepy",
       label: "Lågt",
-      petText: "är skakig och vill ha snabb hjälp.",
-      summary: "Lågt värde gör att din buddy blir skör och ber om snabb omtanke.",
+      petText: "ar somnig och lite lag.",
+      summary: "Under 4.0 mmol/L blir din buddy somnig och tappar fart tills varden kommer upp igen.",
     };
   }
-  if (reading.value > 180) {
+
+  if (reading.value < GLUCOSE_RULES.targetMin) {
     return {
-      mood: "sleepy",
-      label: "Högt",
-      petText: "är trött, varm och törstig.",
-      summary: "Höga värden gör att din buddy blir långsam och börjar längta efter vatten.",
+      statusKey: "edge-low",
+      moodClass: "cautious",
+      label: "Lite lågt",
+      petText: "kanner sig lite skakig och forsiktig.",
+      summary: "Mellan 4.0 och 4.5 mmol/L blir din buddy mer forsiktig och vill att kurvan stiger lite.",
     };
   }
-  if (trend.key.includes("up") && reading.value > 145) {
+
+  if (reading.value > GLUCOSE_RULES.veryHighMin) {
     return {
-      mood: "cautious",
-      label: "På väg upp",
-      petText: "märker att kurvan vill stiga.",
-      summary: "När kurvan börjar lyfta blir din buddy vaksam och mindre avslappnad.",
+      statusKey: "very-high",
+      moodClass: "sleepy",
+      label: "Mycket högt",
+      petText: "ar hangig, tung och valdigt trott.",
+      summary: "Over 12 mmol/L blir din buddy hangig och riktigt seg i kroppen.",
     };
   }
+
+  if (reading.value >= GLUCOSE_RULES.highSadMin) {
+    return {
+      statusKey: "high",
+      moodClass: "cautious",
+      label: "Lite högt",
+      petText: "ar lite ledsen och mindre lekfull.",
+      summary: "Mellan 7.5 och 12 mmol/L blir din buddy lite ledsen och mindre avslappnad.",
+    };
+  }
+
+  if (reading.value > GLUCOSE_RULES.targetMax || trend.key.includes("up")) {
+    return {
+      statusKey: "edge-high",
+      moodClass: "cautious",
+      label: "Pa vag upp",
+      petText: "kanner att kurvan ligger lite over kanten.",
+      summary: "Mellan 7.0 och 7.5 mmol/L ar din buddy inte ledsen an, men den blir mer vaksam.",
+    };
+  }
+
   if (streakMinutes >= 60) {
     return {
-      mood: "sparkly",
+      statusKey: "sparkly",
+      moodClass: "sparkly",
       label: "Optimal zon",
-      petText: "glittrar efter en längre stund i målområdet.",
-      summary: "Över en timme i målområdet förvandlar din buddy till sitt allra gladaste läge.",
+      petText: "glittrar efter en lang fin stund i zonen.",
+      summary: "Over en timme mellan 4.5 och 7.0 mmol/L gor din buddy riktigt glad.",
     };
   }
+
   if (streakMinutes >= 30) {
     return {
-      mood: "playful",
-      label: "I mål",
-      petText: "börjar leka och mjukna upp.",
-      summary: "Efter ungefär 30 minuter i målområdet blir humöret tydligt gladare och lättare.",
+      statusKey: "playful",
+      moodClass: "playful",
+      label: "I mal",
+      petText: "borjar leka och mjukna upp.",
+      summary: "Efter ungefar 30 minuter mellan 4.5 och 7.0 mmol/L blir din buddy mer lekfull.",
     };
   }
+
   return {
-    mood: "calm",
+    statusKey: "steady",
+    moodClass: "calm",
     label: "Stabil",
-    petText: "är lugn och trygg.",
-    summary: "Stabila värden håller din buddy trygg, lugn och balanserad.",
+    petText: "ar lugn och trygg.",
+    summary: "Mellan 4.5 och 7.0 mmol/L mar din buddy bra och kanner sig trygg.",
   };
 }
 
 function calculateMetrics() {
   const values = state.dailyWindow.map((entry) => entry.value);
   const average = values.reduce((sum, value) => sum + value, 0) / values.length;
-  const tir = values.filter((value) => value >= 70 && value <= 180).length / values.length;
-  const high = values.filter((value) => value > 180).length / values.length;
-  const low = values.filter((value) => value < 70).length / values.length;
+  const tir = values.filter((value) => value >= GLUCOSE_RULES.targetMin && value <= GLUCOSE_RULES.targetMax).length / values.length;
+  const high = values.filter((value) => value > GLUCOSE_RULES.targetMax).length / values.length;
+  const low = values.filter((value) => value < GLUCOSE_RULES.targetMin).length / values.length;
   const variance = values.reduce((sum, value) => sum + (value - average) ** 2, 0) / values.length;
   const stdDev = Math.sqrt(variance);
   const gmi = (average + 46.7) / 28.7;
@@ -284,55 +337,69 @@ function updateCompanionClasses(target, speciesClass, moodClass) {
   target.className = `companion-avatar ${target.id === "desktopPet" ? "desktop-pet " : ""}${speciesClass} mood-${moodClass}`;
 }
 
-function renderNeeds(mood, value, streakMinutes) {
+function renderNeeds(statusKey, value, streakMinutes) {
   let heart = 84;
   let snack = 86;
   let water = 88;
-  let heartNote = "Stabil rytm när kurvan ligger fint.";
-  let snackNote = "Mätt och nöjd utan stresspåslag.";
-  let waterNote = "God ork och ingen törstig känsla.";
-  let insightTitle = "När värdena håller sig fina börjar din buddy leka.";
-  let insightBody = "Efter 30 minuter i målområdet blir humöret lättare. Efter 60 minuter kommer det riktiga glittret.";
+  let heartNote = "Stabil rytm nar kurvan ligger fint.";
+  let snackNote = "Matt och nojd utan stresspaslag.";
+  let waterNote = "God ork och ingen torstig kansla.";
+  let insightTitle = "Nar vardena ligger mellan 4.5 och 7.0 mar din buddy bra.";
+  let insightBody = "Det ar den nya glada zonen i appen, och all companionlogik bygger pa just den spannvidden.";
 
-  if (mood === "sleepy") {
-    heart = 54; snack = 58; water = 34;
-    heartNote = "Höga värden gör att pulsen känns trögare.";
-    snackNote = "Maten känns tung när glukoset går högt.";
-    waterNote = "Tydlig törstsignal. Vatten blir viktigt.";
-    insightTitle = "När glukoset blir högt blir din buddy trött och törstig.";
-    insightBody = "Det här är läget där figuren tappar energi, blinkar långsammare och helst vill vila tills kurvan kommer ned igen.";
-  } else if (mood === "weak") {
-    heart = 36; snack = 18; water = 62;
-    heartNote = "Låga värden gör att kompisen blir skakig.";
-    snackNote = "Snabb energi behövs för att komma tillbaka.";
-    waterNote = "Vätskan är okej, men sockret behöver hjälp först.";
-    insightTitle = "Vid låga värden visar buddy tydligt att något inte känns bra.";
-    insightBody = "Figuren kryper ihop, rör sig mindre och ber om snabb hjälp. Det ska kännas direkt när kurvan blir för låg.";
-  } else if (mood === "cautious") {
-    heart = 76; snack = 72; water = 74;
-    heartNote = "Kompisen känner att kurvan lutar uppåt.";
-    snackNote = "Det börjar bli lite mindre harmoniskt.";
-    waterNote = "Lättare törst innan det blir riktigt högt.";
-    insightTitle = "Din buddy märker uppgången innan det blir fullt rött.";
-    insightBody = "Det här mellanläget ska kännas som en mjuk varning: fortfarande okej, men inte lika avslappnat som i optimal zon.";
-  } else if (mood === "playful") {
+  if (statusKey === "low") {
+    heart = 34; snack = 22; water = 64;
+    heartNote = "Under 4.0 mmol/L blir kompisen somnig.";
+    snackNote = "Snabb energi behovs for att komma tillbaka.";
+    waterNote = "Vatskan ar okej, men sockret behover hjalp forst.";
+    insightTitle = "Under 4.0 mmol/L blir buddy somnig och tung.";
+    insightBody = "Det ska synas tydligt i figuren att laget ar lagre och att den tappat fart.";
+  } else if (statusKey === "edge-low") {
+    heart = 58; snack = 46; water = 74;
+    heartNote = "Lite lagt gor buddy mer forsiktig.";
+    snackNote = "Den vill ha lite mer trygg energi.";
+    waterNote = "Ingen stor torst, bara mindre ork.";
+    insightTitle = "Mellan 4.0 och 4.5 mmol/L blir buddy pa sin vakt.";
+    insightBody = "Det ar inte kraschat, men det ar heller inte helt avslappnat.";
+  } else if (statusKey === "very-high") {
+    heart = 42; snack = 48; water = 22;
+    heartNote = "Over 12 mmol/L blir buddy riktigt hangig.";
+    snackNote = "Allt kanns tungt och segt.";
+    waterNote = "Tydlig torstsignal. Vatten blir viktigt.";
+    insightTitle = "Over 12 mmol/L blir buddy hangig och trott.";
+    insightBody = "Det har ar det tyngsta hoga laget, med mindre ork och mer dropp i rorelserna.";
+  } else if (statusKey === "high") {
+    heart = 68; snack = 62; water = 42;
+    heartNote = "Mellan 7.5 och 12 mmol/L blir buddy lite ledsen.";
+    snackNote = "Maten och rytmen kanns inte lika harmoniska.";
+    waterNote = "Mer torstig kansla an i malzonen.";
+    insightTitle = "Mellan 7.5 och 12 mmol/L blir buddy lite ledsen.";
+    insightBody = "Det ar har du ville ha en mjukare sorgsen reaktion i stallet for full kris.";
+  } else if (statusKey === "edge-high") {
+    heart = 78; snack = 74; water = 70;
+    heartNote = "Kurvan ar lite over kanten.";
+    snackNote = "Det borjar bli mindre harmoniskt.";
+    waterNote = "Latt torst innan det blir hogt pa riktigt.";
+    insightTitle = "Mellan 7.0 och 7.5 mmol/L blir buddy mer vaksam.";
+    insightBody = "Det ar over okej-zonen, men inte i det ledsna laget an.";
+  } else if (statusKey === "playful") {
     heart = 94; snack = 88; water = 92;
-    heartNote = "Jämn kurva ger trygg energi.";
+    heartNote = "Jamn kurva ger trygg energi.";
     snackNote = "Lugn mage och mjuk rytm i dagen.";
-    waterNote = "Piggt läge utan törstpåslag.";
-    insightTitle = "Efter ungefär 30 minuter i målområdet blir kompisen lekfull.";
-    insightBody = "Just här börjar figuren röra sig mer, bli social och ge små positiva reaktioner under grafen.";
-  } else if (mood === "sparkly") {
+    waterNote = "Piggt lage utan torstpaslag.";
+    insightTitle = "Efter 30 minuter mellan 4.5 och 7.0 blir kompisen lekfull.";
+    insightBody = "Just har borjar figuren rora sig mer, bli social och ge positiva reaktioner under grafen.";
+  } else if (statusKey === "sparkly") {
     heart = 99; snack = 94; water = 95;
-    heartNote = "Maxad trygghet med lång balansstreak.";
+    heartNote = "Maxad trygghet med lang balansstreak.";
     snackNote = "Stabil energi och ett mjukt flow.";
-    waterNote = "Bra vätskenivå och lätt känsla i kroppen.";
-    insightTitle = "Över en timme i målområdet låser upp det gladaste läget.";
-    insightBody = "Tanken är att du verkligen ska känna när du haft en fin period. Buddy blir stolt, rör sig mer och kan få små celebration-effekter.";
+    waterNote = "Bra vatskeniva och latt kansla i kroppen.";
+    insightTitle = "Over en timme i 4.5 till 7.0 mmol/L laser upp gladast laget.";
+    insightBody = "Har blir buddy riktigt lycklig, med mer studs och roligare animering.";
   }
 
-  if (value > 220) water = 22;
-  if (streakMinutes > 75 && mood !== "sleepy" && mood !== "weak") heart = clamp(heart + 4, 0, 100);
+  if (value > GLUCOSE_RULES.veryHighMin) water = 18;
+  if (streakMinutes > 75 && !["low", "very-high", "high"].includes(statusKey)) heart = clamp(heart + 4, 0, 100);
 
   elements.heartPct.textContent = `${heart}%`;
   elements.snackPct.textContent = `${snack}%`;
@@ -397,7 +464,13 @@ function renderTimeline(mood, latest, trend) {
   const companion = companions[state.selectedCompanion];
   const systemEvent = {
     id: "system-live",
-    icon: mood.mood === "sleepy" ? "😴" : mood.mood === "weak" ? "🧃" : mood.mood === "sparkly" ? "✨" : "🫶",
+    icon:
+      mood.statusKey === "sparkly" ? "✨" :
+      mood.statusKey === "playful" ? "🫶" :
+      mood.statusKey === "low" ? "😴" :
+      mood.statusKey === "high" ? "🥲" :
+      mood.statusKey === "very-high" ? "🥵" :
+      "📈",
     title: `${companion.name} reagerar just nu`,
     note: mood.summary,
     value: state.unit === "mgdl" ? `${Math.round(latest.value)}` : `${round(mgdlToMmol(latest.value), 1).toFixed(1)}`,
@@ -429,9 +502,9 @@ function renderCompanion() {
   const streakMinutes = computeStreak(state.readings);
   const mood = getMoodState(latest, trend, streakMinutes);
 
-  updateCompanionClasses(elements.mainCompanion, companion.species, mood.mood);
-  updateCompanionClasses(elements.desktopPet, companion.species, mood.mood);
-  elements.body.dataset.mood = mood.mood;
+  updateCompanionClasses(elements.mainCompanion, companion.species, mood.moodClass);
+  updateCompanionClasses(elements.desktopPet, companion.species, mood.moodClass);
+  elements.body.dataset.mood = mood.moodClass;
   elements.brandAvatar.textContent = companion.emoji;
   elements.buddyName.textContent = companion.name;
   elements.profileEmoji.textContent = companion.emoji;
@@ -447,10 +520,47 @@ function renderCompanion() {
   elements.lastSync.textContent = formatRelativeTime(latest.time);
   elements.streakValue.textContent = `${streakMinutes} min`;
 
-  renderNeeds(mood.mood, latest.value, streakMinutes);
+  renderNeeds(mood.statusKey, latest.value, streakMinutes);
   renderInsights();
   renderTimeline(mood, latest, trend);
   renderChart();
+}
+
+function saveAuthState() {
+  storage.set("sockervan-auth", state.auth);
+}
+
+function showAuthGate(visible) {
+  elements.authGate.classList.toggle("is-visible", visible);
+  elements.body.classList.toggle("auth-open", visible);
+}
+
+function updateAuthGate() {
+  const companion = companions[state.selectedCompanion];
+  elements.authBuddyEmoji.textContent = companion.emoji;
+  elements.authBuddyName.textContent = companion.name;
+  elements.authBuddySubtitle.textContent = companion.subtitle;
+
+  if (state.auth.status === "authorized") {
+    elements.authGateMessage.textContent =
+      `${companion.name} ar redo. Dexcom-handoff ar klar och dashboarden kan oppnas.`;
+    elements.authGateStatus.textContent =
+      "Authorization code kom tillbaka till appen. For riktigt token-utbyte och livevardeshamtning behovs fortfarande backend enligt Dexcoms dokumentation.";
+    return;
+  }
+
+  if (state.dexcom.clientId) {
+    elements.authGateMessage.textContent =
+      `${companion.name} visas direkt efter att du valt demo eller startat Dexcom-inloggningen.`;
+    elements.authGateStatus.textContent =
+      "Dexcom OAuth oppnar Dexcoms egen inloggningssida. Pa en statisk GitHub Pages-sida behovs fortfarande backend for det sista token-steget.";
+    return;
+  }
+
+  elements.authGateMessage.textContent =
+    `${companion.name} ar vald. Du kan ga vidare i demo direkt, eller konfigurera Dexcom och sedan starta samma handoff-flode som i Sugarmate-liknande appar.`;
+  elements.authGateStatus.textContent =
+    "For att starta riktig Dexcom-login behover du minst ett Dexcom Client ID. Redirect URI kan vara denna Pages-URL om den finns registrerad i din Dexcom-app.";
 }
 
 function showOnboarding(visible) {
@@ -458,6 +568,7 @@ function showOnboarding(visible) {
   elements.body.classList.toggle("onboarding-open", visible);
   if (visible) {
     state.motion.overlayScrollY = elements.onboarding.scrollTop || 0;
+    showAuthGate(false);
   }
 }
 
@@ -467,7 +578,8 @@ function selectCompanion(key) {
   elements.choiceButtons.forEach((button) => {
     button.classList.toggle("is-selected", button.dataset.companion === key);
   });
-  elements.confirmCompanion.textContent = `Starta med ${companions[key].name}`;
+  elements.confirmCompanion.textContent = `Fortsatt till Dexcom med ${companions[key].name}`;
+  updateAuthGate();
   renderCompanion();
 }
 
@@ -512,12 +624,17 @@ function resolveDexcomBase(region, environment) {
   return "https://api.dexcom.eu";
 }
 
+function getCurrentRedirectUrl() {
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
 function buildDexcomAuthUrl() {
   const { clientId, redirectUri, region, environment } = state.dexcom;
-  if (!clientId || !redirectUri) return "Lägg in Client ID och Redirect URI för att skapa en OAuth-länk.";
+  const resolvedRedirectUri = redirectUri || getCurrentRedirectUrl();
+  if (!clientId) return "Lagg in Client ID for att skapa en Dexcom OAuth-lank.";
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: redirectUri,
+    redirect_uri: resolvedRedirectUri,
     response_type: "code",
     scope: "offline_access",
     state: "sockervan-demo-state",
@@ -538,11 +655,11 @@ function renderDexcomPanel() {
 
   if (state.dexcom.mode === "mock") {
     elements.integrationSummary.textContent = "Demo-läge visar en mockad Dexcom-ström och låter dig trimma buddy-reaktionerna utan att logga in.";
-    elements.cloudStatus.textContent = "Mockad Dexcom-ström aktiv";
+    elements.cloudStatus.textContent = state.auth.status === "demo" ? "Demo-lage aktivt" : "Mockad Dexcom-strom aktiv";
   } else {
     const regionLabel = state.dexcom.environment === "sandbox" ? "Sandbox" : state.dexcom.region;
     elements.integrationSummary.textContent = `Dexcom ${regionLabel} är valt. Riktig inloggning bör skickas via backend eftersom Dexcom vill ha tokens lagrade på servern.`;
-    elements.cloudStatus.textContent = `Dexcom ${regionLabel} förberedd`;
+    elements.cloudStatus.textContent = state.auth.status === "authorized" ? `Dexcom ${regionLabel} handoff klar` : `Dexcom ${regionLabel} forberedd`;
   }
 
   if (state.dexcom.environment === "sandbox") {
@@ -552,11 +669,36 @@ function renderDexcomPanel() {
   } else {
     elements.sandboxHint.innerHTML = 'US-läge använder <code>api.dexcom.com</code>. I USA anger Dexcom cirka 1 timmes datafördröjning för mobiluppladdad data.';
   }
+
+  updateAuthGate();
 }
 
 function saveDexcomState() {
   storage.set("sockervan-dexcom", state.dexcom);
   renderDexcomPanel();
+}
+
+function handleDexcomReturn() {
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get("code");
+  const oauthError = url.searchParams.get("error");
+
+  if (code) {
+    state.auth.status = "authorized";
+    state.auth.lastProvider = "dexcom";
+    state.dexcom.mode = "live";
+    saveAuthState();
+    storage.set("sockervan-dexcom", state.dexcom);
+    window.history.replaceState({}, document.title, getCurrentRedirectUrl());
+    return;
+  }
+
+  if (oauthError) {
+    state.auth.status = "locked";
+    state.auth.lastProvider = "dexcom";
+    saveAuthState();
+    window.history.replaceState({}, document.title, getCurrentRedirectUrl());
+  }
 }
 
 function stepSimulation() {
@@ -655,10 +797,47 @@ function bindEvents() {
     state.showOnboarding = false;
     storage.set("sockervan-onboarding-dismissed", true);
     showOnboarding(false);
+    if (state.auth.status === "locked") {
+      updateAuthGate();
+      showAuthGate(true);
+    }
   });
 
   [elements.changeBuddyButton, elements.profileChangeBuddy].forEach((button) => {
     button.addEventListener("click", () => showOnboarding(true));
+  });
+
+  elements.authBackButton.addEventListener("click", () => {
+    showAuthGate(false);
+    showOnboarding(true);
+  });
+
+  elements.authDemoButton.addEventListener("click", () => {
+    state.auth.status = "demo";
+    state.auth.lastProvider = "demo";
+    state.dexcom.mode = "mock";
+    saveAuthState();
+    saveDexcomState();
+    showAuthGate(false);
+  });
+
+  elements.authSetupButton.addEventListener("click", () => {
+    showAuthGate(false);
+    switchScreen("profile");
+  });
+
+  elements.authDexcomButton.addEventListener("click", () => {
+    const authUrl = buildDexcomAuthUrl();
+    if (!state.dexcom.clientId) {
+      elements.authGateStatus.textContent =
+        "Fyll i Dexcom Client ID under Profil for att kunna starta Dexcom-login. Redirect URI kan vara denna Pages-URL om den ar registrerad.";
+      return;
+    }
+    state.auth.lastProvider = "dexcom";
+    saveAuthState();
+    state.dexcom.mode = "live";
+    saveDexcomState();
+    window.location.href = authUrl;
   });
 
   elements.unitButtons.forEach((button) => {
@@ -740,6 +919,7 @@ function bindEvents() {
 }
 
 function init() {
+  handleDexcomReturn();
   elements.unitButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.unit === state.unit);
   });
@@ -747,6 +927,7 @@ function init() {
   switchScreen("home");
   renderDexcomPanel();
   showOnboarding(state.showOnboarding);
+  showAuthGate(!state.showOnboarding && state.auth.status === "locked");
   bindEvents();
   window.setInterval(stepSimulation, 6000);
   window.requestAnimationFrame(animateScene);

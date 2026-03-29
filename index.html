@@ -424,8 +424,48 @@
           </button>
         </div>
 
-        <button class="primary-button wide" id="confirmCompanion" type="button">Starta med Sunny</button>
+        <button class="primary-button wide" id="confirmCompanion" type="button">Fortsatt till Dexcom med Sunny</button>
         <p class="foot-note">Du kan alltid byta buddy senare under Profil.</p>
+      </div>
+    </section>
+
+    <section class="auth-gate" id="authGate" aria-labelledby="authGateTitle">
+      <div class="auth-panel">
+        <p class="eyebrow">Dexcom sign-in</p>
+        <h2 id="authGateTitle">Logga in innan grafen</h2>
+        <p class="onboarding-copy" id="authGateMessage">
+          Vald buddy visas efter att du valt demo eller startat Dexcom-inloggningen, ungefär som ett Sugarmate-liknande handoff-flode.
+        </p>
+
+        <div class="profile-card auth-buddy-card">
+          <div class="profile-buddy">
+            <div class="profile-emoji" id="authBuddyEmoji">🐶</div>
+            <div>
+              <strong id="authBuddyName">Sunny</strong>
+              <p id="authBuddySubtitle">Golden buddy</p>
+            </div>
+          </div>
+          <button class="secondary-button compact" id="authBackButton" type="button">Byt buddy</button>
+        </div>
+
+        <div class="range-strip">
+          <div class="status-chip good">4.5-7.0 mmol/L = 81-126 mg/dL: glad och okej</div>
+          <div class="status-chip soft">7.5-12.0 mmol/L = 135-216 mg/dL: lite ledsen</div>
+          <div class="status-chip high">Over 12 mmol/L = over 216 mg/dL: hangig</div>
+          <div class="status-chip low">Under 4 mmol/L = under 72 mg/dL: somnig</div>
+        </div>
+
+        <div class="connect-card auth-connect-card">
+          <p class="integration-summary" id="authGateStatus">
+            Dexcom OAuth oppnar Dexcoms egen inloggningssida. For riktig live-data pa GitHub Pages behovs fortfarande en backend for token-utbyte.
+          </p>
+
+          <div class="auth-actions">
+            <button class="primary-button wide" id="authDexcomButton" type="button">Logga in med Dexcom</button>
+            <button class="secondary-button wide" id="authDemoButton" type="button">Fortsatt i demo</button>
+            <button class="ghost-button" id="authSetupButton" type="button">Konfigurera Dexcom i Profil</button>
+          </div>
+        </div>
       </div>
     </section>
   </body>
