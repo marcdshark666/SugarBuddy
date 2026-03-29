@@ -85,6 +85,7 @@ const elements = {
   onboarding: document.getElementById("onboarding"),
   onboardingPanel: document.querySelector(".onboarding-panel"),
   authGate: document.getElementById("authGate"),
+  authPanel: document.getElementById("authPanel") || document.querySelector(".auth-panel"),
   confirmCompanion: document.getElementById("confirmCompanion"),
   choiceButtons: Array.from(document.querySelectorAll(".companion-choice")),
   choiceArts: Array.from(document.querySelectorAll(".choice-art")),
@@ -157,6 +158,8 @@ const elements = {
   authBuddyEmoji: document.getElementById("authBuddyEmoji"),
   authBuddyName: document.getElementById("authBuddyName"),
   authBuddySubtitle: document.getElementById("authBuddySubtitle"),
+  authCompanion: document.getElementById("authCompanion"),
+  authBubble: document.getElementById("authBubble"),
   authGateMessage: document.getElementById("authGateMessage"),
   authGateStatus: document.getElementById("authGateStatus"),
   authDexcomButton: document.getElementById("authDexcomButton"),
@@ -334,7 +337,14 @@ function formatClock(date) {
 }
 
 function updateCompanionClasses(target, speciesClass, moodClass) {
-  target.className = `companion-avatar ${target.id === "desktopPet" ? "desktop-pet " : ""}${speciesClass} mood-${moodClass}`;
+  if (!target) return;
+  const roleClass =
+    target.id === "desktopPet" ? "desktop-pet" :
+    target.id === "authCompanion" ? "auth-companion" :
+    "";
+  target.className = ["companion-avatar", roleClass, speciesClass, `mood-${moodClass}`]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function renderNeeds(statusKey, value, streakMinutes) {
@@ -504,6 +514,7 @@ function renderCompanion() {
 
   updateCompanionClasses(elements.mainCompanion, companion.species, mood.moodClass);
   updateCompanionClasses(elements.desktopPet, companion.species, mood.moodClass);
+  updateCompanionClasses(elements.authCompanion, companion.species, mood.moodClass);
   elements.body.dataset.mood = mood.moodClass;
   elements.brandAvatar.textContent = companion.emoji;
   elements.buddyName.textContent = companion.name;
@@ -512,6 +523,7 @@ function renderCompanion() {
   elements.profileBuddySpecies.textContent = companion.subtitle;
   elements.moodBubble.textContent = `${companion.name} ${mood.petText}`;
   elements.desktopBubble.textContent = `${companion.name} ${mood.petText}`;
+  if (elements.authBubble) elements.authBubble.textContent = `${companion.name} ${mood.petText}`;
   elements.heroMood.textContent = `${companion.name}: ${mood.label.toLowerCase()}`;
   elements.readingSummary.textContent = mood.summary;
   elements.currentValue.textContent = formatGlucose(latest.value);
@@ -533,6 +545,10 @@ function saveAuthState() {
 function showAuthGate(visible) {
   elements.authGate.classList.toggle("is-visible", visible);
   elements.body.classList.toggle("auth-open", visible);
+  if (visible && elements.authPanel) {
+    elements.authPanel.scrollTop = 0;
+    state.motion.overlayScrollY = elements.authPanel.scrollTop || 0;
+  }
 }
 
 function updateAuthGate() {
@@ -540,10 +556,11 @@ function updateAuthGate() {
   elements.authBuddyEmoji.textContent = companion.emoji;
   elements.authBuddyName.textContent = companion.name;
   elements.authBuddySubtitle.textContent = companion.subtitle;
+  elements.authDexcomButton.textContent = state.dexcom.clientId ? "Oppna Dexcoms login" : "Forbered Dexcom-login";
 
   if (state.auth.status === "authorized") {
     elements.authGateMessage.textContent =
-      `${companion.name} ar redo. Dexcom-handoff ar klar och dashboarden kan oppnas.`;
+      `${companion.name} ar redo. Dexcom-handoff ar klar och du kan ga tillbaka till grafen med samma figur ovanfor kurvan.`;
     elements.authGateStatus.textContent =
       "Authorization code kom tillbaka till appen. For riktigt token-utbyte och livevardeshamtning behovs fortfarande backend enligt Dexcoms dokumentation.";
     return;
@@ -551,23 +568,24 @@ function updateAuthGate() {
 
   if (state.dexcom.clientId) {
     elements.authGateMessage.textContent =
-      `${companion.name} visas direkt efter att du valt demo eller startat Dexcom-inloggningen.`;
+      `${companion.name} foljer med direkt fran valrutan hit, och samma figur ligger sedan kvar ovanfor grafen nar du kommer vidare.`;
     elements.authGateStatus.textContent =
-      "Dexcom OAuth oppnar Dexcoms egen inloggningssida. Pa en statisk GitHub Pages-sida behovs fortfarande backend for det sista token-steget.";
+      "Efter klick oppnas Dexcoms egen inloggningssida med anvandarnamn och losenord. Pa en statisk GitHub Pages-sida behovs fortfarande backend for det sista token-steget.";
     return;
   }
 
   elements.authGateMessage.textContent =
-    `${companion.name} ar vald. Du kan ga vidare i demo direkt, eller konfigurera Dexcom och sedan starta samma handoff-flode som i Sugarmate-liknande appar.`;
+    `${companion.name} ar vald och visas redan i login-steget. Du kan ga vidare i demo direkt, eller fylla i Dexcom-uppgifterna i Profil och sedan oppna Dexcoms riktiga login.`;
   elements.authGateStatus.textContent =
-    "For att starta riktig Dexcom-login behover du minst ett Dexcom Client ID. Redirect URI kan vara denna Pages-URL om den finns registrerad i din Dexcom-app.";
+    "For att oppna Dexcoms login behover du minst ett Dexcom Client ID. Redirect URI kan vara denna Pages-URL om den finns registrerad i din Dexcom-app.";
 }
 
 function showOnboarding(visible) {
   elements.onboarding.classList.toggle("is-visible", visible);
   elements.body.classList.toggle("onboarding-open", visible);
   if (visible) {
-    state.motion.overlayScrollY = elements.onboarding.scrollTop || 0;
+    elements.onboardingPanel.scrollTop = 0;
+    state.motion.overlayScrollY = elements.onboardingPanel.scrollTop || 0;
     showAuthGate(false);
   }
 }
@@ -721,8 +739,8 @@ function updateScrollMotion() {
   state.motion.scrollImpulse = clamp(state.motion.scrollImpulse + delta * 0.22, -24, 24);
 }
 
-function updateOverlayScrollMotion() {
-  const nextY = elements.onboarding.scrollTop || 0;
+function updateOverlayScrollMotion(event) {
+  const nextY = event.currentTarget.scrollTop || 0;
   const delta = nextY - state.motion.overlayScrollY;
   state.motion.overlayScrollY = nextY;
   state.motion.scrollImpulse = clamp(state.motion.scrollImpulse + delta * 0.22, -24, 24);
@@ -736,6 +754,7 @@ function animateScene(now) {
   const sceneTime = now / 1000;
   const scrollWave = state.motion.scrollImpulse;
   const onboardingVisible = elements.onboarding.classList.contains("is-visible");
+  const authVisible = elements.authGate.classList.contains("is-visible");
   const choiceBoost = onboardingVisible ? 1.45 : 1;
 
   desktopPosition += desktopDirection * speed;
@@ -764,6 +783,15 @@ function animateScene(now) {
       const desktopShadowScale = 1 - desktopBob / 95 + Math.abs(scrollWave) * 0.004;
       elements.desktopShadow.style.transform = `scaleX(${desktopShadowScale.toFixed(3)})`;
     }
+  }
+
+  if (elements.authCompanion && authVisible) {
+    const authBob = Math.sin(sceneTime * 3.2 + 0.5) * 5.2 + Math.cos(sceneTime * 2.1) * 1.6;
+    const authTilt = Math.sin(sceneTime * 2.4 + 0.4) * 1.8 + scrollWave * 0.18;
+    elements.authCompanion.style.transform =
+      `translateX(-50%) translateY(${(authBob - scrollWave * 0.28).toFixed(2)}px) rotate(${authTilt.toFixed(2)}deg)`;
+    elements.authBubble.style.transform =
+      `translateX(-50%) translateY(${(Math.sin(sceneTime * 2.7 + 0.2) * 2.8 - scrollWave * 0.12).toFixed(2)}px)`;
   }
 
   elements.choiceButtons.forEach((button, index) => {
@@ -819,6 +847,7 @@ function bindEvents() {
     saveAuthState();
     saveDexcomState();
     showAuthGate(false);
+    switchScreen("home");
   });
 
   elements.authSetupButton.addEventListener("click", () => {
@@ -831,6 +860,8 @@ function bindEvents() {
     if (!state.dexcom.clientId) {
       elements.authGateStatus.textContent =
         "Fyll i Dexcom Client ID under Profil for att kunna starta Dexcom-login. Redirect URI kan vara denna Pages-URL om den ar registrerad.";
+      showAuthGate(false);
+      switchScreen("profile");
       return;
     }
     state.auth.lastProvider = "dexcom";
@@ -912,7 +943,10 @@ function bindEvents() {
   });
 
   window.addEventListener("scroll", updateScrollMotion, { passive: true });
-  elements.onboarding.addEventListener("scroll", updateOverlayScrollMotion, { passive: true });
+  elements.onboardingPanel.addEventListener("scroll", updateOverlayScrollMotion, { passive: true });
+  if (elements.authPanel) {
+    elements.authPanel.addEventListener("scroll", updateOverlayScrollMotion, { passive: true });
+  }
   window.addEventListener("resize", () => {
     desktopPosition = clamp(desktopPosition, 18, Math.max(18, window.innerWidth - 280));
   });

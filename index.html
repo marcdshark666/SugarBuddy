@@ -430,22 +430,50 @@
     </section>
 
     <section class="auth-gate" id="authGate" aria-labelledby="authGateTitle">
-      <div class="auth-panel">
+      <div class="auth-panel" id="authPanel">
         <p class="eyebrow">Dexcom sign-in</p>
         <h2 id="authGateTitle">Logga in innan grafen</h2>
         <p class="onboarding-copy" id="authGateMessage">
           Vald buddy visas efter att du valt demo eller startat Dexcom-inloggningen, ungefär som ett Sugarmate-liknande handoff-flode.
         </p>
 
-        <div class="profile-card auth-buddy-card">
-          <div class="profile-buddy">
-            <div class="profile-emoji" id="authBuddyEmoji">🐶</div>
-            <div>
-              <strong id="authBuddyName">Sunny</strong>
-              <p id="authBuddySubtitle">Golden buddy</p>
+        <div class="auth-hero">
+          <div class="profile-card auth-buddy-card">
+            <div class="profile-buddy">
+              <div class="profile-emoji" id="authBuddyEmoji">🐶</div>
+              <div>
+                <strong id="authBuddyName">Sunny</strong>
+                <p id="authBuddySubtitle">Golden buddy</p>
+              </div>
+            </div>
+            <button class="secondary-button compact" id="authBackButton" type="button">Byt buddy</button>
+          </div>
+
+          <div class="auth-world">
+            <div class="auth-pet-stage">
+              <div class="companion-avatar auth-companion species-dog mood-calm" id="authCompanion" data-avatar-role="auth-companion" aria-hidden="true">
+                <div class="pet-shadow"></div>
+                <div class="pet-tail"></div>
+                <div class="pet-body">
+                  <div class="pet-belly"></div>
+                  <div class="pet-face">
+                    <span class="pet-eye left"></span>
+                    <span class="pet-eye right"></span>
+                    <span class="pet-cheek left"></span>
+                    <span class="pet-cheek right"></span>
+                    <span class="pet-nose"></span>
+                    <span class="pet-mouth"></span>
+                    <span class="pet-feature left"></span>
+                    <span class="pet-feature right"></span>
+                  </div>
+                  <div class="pet-foot left"></div>
+                  <div class="pet-foot right"></div>
+                </div>
+              </div>
+
+              <div class="auth-bubble" id="authBubble">Sunny vantar pa Dexcom-login.</div>
             </div>
           </div>
-          <button class="secondary-button compact" id="authBackButton" type="button">Byt buddy</button>
         </div>
 
         <div class="range-strip">
@@ -460,8 +488,16 @@
             Dexcom OAuth oppnar Dexcoms egen inloggningssida. For riktig live-data pa GitHub Pages behovs fortfarande en backend for token-utbyte.
           </p>
 
+          <div class="auth-login-card">
+            <strong>Var skriver jag användarnamn och lösenord?</strong>
+            <p>
+              Efter klick på Dexcom-knappen öppnas Dexcoms officiella login där du fyller i ditt Dexcom-konto.
+              Den här prototypen sparar inte dina inloggningsuppgifter lokalt.
+            </p>
+          </div>
+
           <div class="auth-actions">
-            <button class="primary-button wide" id="authDexcomButton" type="button">Logga in med Dexcom</button>
+            <button class="primary-button wide" id="authDexcomButton" type="button">Oppna Dexcoms login</button>
             <button class="secondary-button wide" id="authDemoButton" type="button">Fortsatt i demo</button>
             <button class="ghost-button" id="authSetupButton" type="button">Konfigurera Dexcom i Profil</button>
           </div>
