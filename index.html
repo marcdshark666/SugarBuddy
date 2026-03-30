@@ -277,100 +277,150 @@
             </div>
           </section>
 
-          <section class="screen" data-screen="profile">
-            <div class="section-heading">
-              <div>
-                <p class="section-kicker">Profil och koppling</p>
-                <h3>Dexcom och companion</h3>
-              </div>
-            </div>
-
-            <div class="profile-card">
-              <div class="profile-buddy">
-                <div class="profile-emoji" id="profileEmoji">🐶</div>
-                <div>
-                  <strong id="profileBuddyName">Sunny</strong>
-                  <p id="profileBuddySpecies">Golden buddy</p>
+          <section class="screen profile-screen" data-screen="profile">
+            <div class="cgm-shell">
+              <div class="cgm-topband">
+                <div class="cgm-identity">
+                  <div class="profile-emoji profile-emoji-dark" id="profileEmoji">🐶</div>
+                  <div>
+                    <p class="section-kicker cgm-kicker">Dexcom companion</p>
+                    <strong id="profileBuddyName">Sunny</strong>
+                    <p id="profileBuddySpecies">Golden buddy</p>
+                  </div>
                 </div>
-              </div>
-              <button class="secondary-button" id="profileChangeBuddy" type="button">Byt buddy</button>
-            </div>
 
-            <div class="connect-card" id="connectCard">
-              <div class="connect-topline">
-                <strong>Dexcom-lage</strong>
-                <div class="mode-switch" role="tablist" aria-label="Välj dataläge">
-                  <button class="is-active" data-mode="mock" type="button">Demo</button>
-                  <button data-mode="live" type="button">Dexcom</button>
+                <div class="cgm-glance">
+                  <span class="cgm-glance-label">Nu</span>
+                  <div class="cgm-glance-main">
+                    <strong id="profileSnapshotValue">5.8</strong>
+                    <span id="profileSnapshotUnit">mmol/L</span>
+                  </div>
+                  <span class="cgm-glance-trend" id="profileSnapshotTrend">Stabil</span>
                 </div>
               </div>
 
-              <div class="form-grid">
-                <label>
-                  <span>Region</span>
-                  <select id="regionSelect">
-                    <option value="EU">EU</option>
-                    <option value="US">US</option>
-                    <option value="JP">JP</option>
-                  </select>
-                </label>
+              <div class="cgm-route">Settings &gt; CGM</div>
 
-                <label>
-                  <span>Miljo</span>
-                  <select id="environmentSelect">
-                    <option value="sandbox">Sandbox</option>
-                    <option value="production">Production</option>
-                  </select>
-                </label>
+              <article class="cgm-card">
+                <div class="cgm-card-head">
+                  <div>
+                    <h4>Continuous Glucose Monitor</h4>
+                    <p>Vald sensor och hur Sockervan kopplas till Dexcom.</p>
+                  </div>
+                </div>
 
-                <label>
-                  <span>Client ID</span>
-                  <input id="clientIdInput" type="text" placeholder="Dexcom app client_id">
-                </label>
+                <div class="cgm-option is-selected">
+                  <span class="cgm-option-radio" aria-hidden="true"></span>
+                  <div>
+                    <strong>Dexcom G7</strong>
+                    <p>Glukosdatan kan lasas in via Dexcom Share eller den inbyggda bridgen.</p>
+                  </div>
+                </div>
 
-                <label>
-                  <span>Redirect URI</span>
-                  <input id="redirectUriInput" type="text" placeholder="https://din-app.se/auth/dexcom/callback">
-                </label>
+                <button class="ghost-link ghost-link-green" type="button">Visa alla CGM-val</button>
+              </article>
 
-                <label>
-                  <span>Backend URL</span>
-                  <input id="backendUrlInput" type="text" placeholder="https://din-backend.se">
-                </label>
+              <div class="connect-card cgm-share-card" id="connectCard">
+                <div class="share-heading">
+                  <div>
+                    <strong>Dexcom Share</strong>
+                    <p class="share-subcopy">Mork setup inspirerad av Gluroo, men med Dexcoms riktiga handoff bakom kulisserna.</p>
+                  </div>
+
+                  <div class="share-badge-row">
+                    <span class="share-badge" id="profileSyncState">Syncing</span>
+                    <span class="share-badge share-badge-outline" id="profileShareStatus">Status</span>
+                  </div>
+                </div>
+
+                <div class="connect-topline">
+                  <strong>Dexcom-lage</strong>
+                  <div class="mode-switch mode-switch-dark" role="tablist" aria-label="Valj datalage">
+                    <button class="is-active" data-mode="mock" type="button">Demo</button>
+                    <button data-mode="live" type="button">Dexcom</button>
+                  </div>
+                </div>
+
+                <div class="dark-form-grid">
+                  <label class="dark-field">
+                    <span>Dexcom app / Client ID</span>
+                    <input id="clientIdInput" type="text" placeholder="Dexcom app client_id">
+                  </label>
+
+                  <label class="dark-field">
+                    <span>Redirect URI</span>
+                    <input id="redirectUriInput" type="text" placeholder="https://din-app.se/auth/dexcom/callback">
+                  </label>
+
+                  <label class="dark-field">
+                    <span>Backend URL</span>
+                    <input id="backendUrlInput" type="text" placeholder="https://din-backend.se">
+                  </label>
+                </div>
+
+                <div class="share-toggle-row">
+                  <button class="switch-button" id="profileRevealToggle" type="button" aria-pressed="false">
+                    <span class="switch-track"><span class="switch-thumb"></span></span>
+                    <span id="profileRevealText">Visa kopplingsdetaljer</span>
+                  </button>
+
+                  <button class="ghost-link ghost-link-green" id="buildAuthButton" type="button">Restart</button>
+                </div>
+
+                <div class="dark-select-grid">
+                  <label class="dark-field">
+                    <span>Region</span>
+                    <select id="regionSelect">
+                      <option value="EU">EU</option>
+                      <option value="US">US</option>
+                      <option value="JP">JP</option>
+                    </select>
+                  </label>
+
+                  <label class="dark-field">
+                    <span>Miljo</span>
+                    <select id="environmentSelect">
+                      <option value="sandbox">Sandbox</option>
+                      <option value="production">Production</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="integration-actions cgm-integration-actions">
+                  <button class="primary-button compact" id="copyAuthButton" type="button">Kopiera lank</button>
+                  <button class="ghost-button danger-button compact" id="removeDexcomButton" type="button">Remove</button>
+                </div>
+
+                <p class="integration-summary" id="integrationSummary">
+                  Demo-lage visar en mockad strom och later dig justera buddy-reaktionerna innan riktig Dexcom-koppling finns.
+                </p>
+                <pre class="auth-preview is-hidden" id="authPreview">Lagg in Client ID och Redirect URI for att skapa en Dexcom OAuth-lank.</pre>
               </div>
 
-              <div class="integration-actions">
-                <button class="primary-button compact" id="buildAuthButton" type="button">Bygg OAuth-lank</button>
-                <button class="secondary-button compact" id="copyAuthButton" type="button">Kopiera lank</button>
+              <div class="info-stack dark-info-stack">
+                <article class="info-card dark-info-card">
+                  <strong>Direkt fran officiella Dexcom API</strong>
+                  <p>
+                    Dexcom V3 stoder G6 och G7. EU och Sverige bor kopplas via <code>api.dexcom.eu</code>,
+                    medan sandbox anvander <code>sandbox-api.dexcom.com</code>.
+                  </p>
+                </article>
+                <article class="info-card dark-info-card">
+                  <strong>Viktigt for riktig lansering</strong>
+                  <p>
+                    Dexcom vill att tokens lagras serverside. Frontend-only ar bra for prototypen, men riktig inloggning
+                    bor ga via backend eller desktop-wrapper.
+                  </p>
+                </article>
+                <article class="info-card dark-info-card">
+                  <strong>Sandladetest</strong>
+                  <p id="sandboxHint">
+                    For G7-test i sandbox rekommenderas kontot <code>SandboxUser7</code> enligt Dexcoms dokumentation.
+                  </p>
+                </article>
               </div>
 
-              <p class="integration-summary" id="integrationSummary">
-                Demo-lage visar en mockad strom och later dig justera humörlogiken innan riktig Dexcom-koppling finns.
-              </p>
-              <pre class="auth-preview" id="authPreview">Lägg in Client ID och Redirect URI för att skapa en OAuth-länk.</pre>
-            </div>
-
-            <div class="info-stack">
-              <article class="info-card">
-                <strong>Direkt från officiella Dexcom API</strong>
-                <p>
-                  Dexcom V3 stoder G6 och G7. EU och Sverige bor kopplas via <code>api.dexcom.eu</code>,
-                  medan sandbox använder <code>sandbox-api.dexcom.com</code>.
-                </p>
-              </article>
-              <article class="info-card">
-                <strong>Viktigt for riktig lansering</strong>
-                <p>
-                  Dexcom vill att tokens lagras serverside. Frontend-only ar bra for prototypen, men riktig inloggning
-                  bor ga via backend eller desktop-wrapper.
-                </p>
-              </article>
-              <article class="info-card">
-                <strong>Sandlåde-test</strong>
-                <p id="sandboxHint">
-                  For G7-test i sandbox rekommenderas kontot <code>SandboxUser7</code> enligt Dexcoms dokumentation.
-                </p>
-              </article>
+              <button class="secondary-button wide" id="profileChangeBuddy" type="button">Byt buddy</button>
             </div>
           </section>
         </div>
@@ -430,27 +480,87 @@
     </section>
 
     <section class="auth-gate" id="authGate" aria-labelledby="authGateTitle">
-      <div class="auth-panel" id="authPanel">
-        <p class="eyebrow">Dexcom sign-in</p>
-        <h2 id="authGateTitle">Logga in innan grafen</h2>
-        <p class="onboarding-copy" id="authGateMessage">
-          Vald buddy visas efter att du valt demo eller startat Dexcom-inloggningen, ungefär som ett Sugarmate-liknande handoff-flode.
+      <div class="auth-panel auth-panel-dark" id="authPanel">
+        <div class="auth-topband">
+          <div class="auth-top-left">
+            <div class="profile-emoji profile-emoji-dark" id="authBuddyEmoji">🐶</div>
+            <div>
+              <p class="eyebrow auth-kicker">Dexcom sign-in</p>
+              <h2 id="authGateTitle">Logga in innan grafen</h2>
+            </div>
+          </div>
+
+          <div class="auth-reading-pill">
+            <span class="auth-reading-label">Nu</span>
+            <strong id="authSnapshotValue">5.8</strong>
+            <span id="authSnapshotUnit">mmol/L</span>
+            <span id="authSnapshotTrend">Stabil</span>
+          </div>
+        </div>
+
+        <p class="auth-route">Settings &gt; CGM</p>
+        <p class="onboarding-copy auth-copy" id="authGateMessage">
+          Vald buddy visas efter att du valt demo eller startat Dexcom-inloggningen, ungefar som ett Sugarmate-liknande handoff-flode.
         </p>
 
+        <div class="auth-login-surface">
+          <div class="share-heading auth-share-heading">
+            <div>
+              <strong>Dexcom Share</strong>
+              <p class="share-subcopy">Utseendet ar narmare referensbilderna, men sjalva inloggningen gar fortsatt via Dexcom eller backend-bridge.</p>
+            </div>
+
+            <div class="share-badge-row">
+              <span class="share-badge" id="authSyncState">Syncing</span>
+              <span class="share-badge share-badge-outline" id="authShareStatus">Status</span>
+            </div>
+          </div>
+
+          <div class="auth-form-grid">
+            <label class="dark-field">
+              <span>Email (Username)</span>
+              <input id="authUsernameInput" type="text" value="Fylls i pa Dexcoms egen sida" readonly>
+            </label>
+
+            <label class="dark-field">
+              <span>Password</span>
+              <input id="authPasswordInput" type="password" value="Dexcom-login sker externt" readonly>
+            </label>
+          </div>
+
+          <div class="share-toggle-row">
+            <button class="switch-button" id="authPasswordToggle" type="button" aria-pressed="false">
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+              <span id="authPasswordToggleText">Show my password</span>
+            </button>
+
+            <button class="ghost-link ghost-link-green" id="authBackButton" type="button">Byt buddy</button>
+          </div>
+
+          <p class="integration-summary" id="authGateStatus">
+            Dexcom OAuth oppnar Dexcoms egen inloggningssida. For riktig live-data pa GitHub Pages behovs fortfarande en backend for token-utbyte.
+          </p>
+
+          <div class="auth-actions auth-actions-dark">
+            <button class="primary-button wide" id="authDexcomButton" type="button">Oppna Dexcoms login</button>
+            <button class="secondary-button wide" id="authDemoButton" type="button">Fortsatt i demo</button>
+            <button class="ghost-button auth-ghost-button" id="authSetupButton" type="button">Konfigurera Dexcom i Profil</button>
+          </div>
+        </div>
+
         <div class="auth-hero">
-          <div class="profile-card auth-buddy-card">
+          <div class="profile-card auth-buddy-card auth-buddy-card-dark">
             <div class="profile-buddy">
-              <div class="profile-emoji" id="authBuddyEmoji">🐶</div>
+              <div class="profile-emoji profile-emoji-dark" id="authBuddyCardEmoji">🐶</div>
               <div>
                 <strong id="authBuddyName">Sunny</strong>
                 <p id="authBuddySubtitle">Golden buddy</p>
               </div>
             </div>
-            <button class="secondary-button compact" id="authBackButton" type="button">Byt buddy</button>
           </div>
 
-          <div class="auth-world">
-            <div class="auth-pet-stage">
+          <div class="auth-world auth-world-dark">
+            <div class="auth-pet-stage auth-pet-stage-dark">
               <div class="companion-avatar auth-companion species-dog mood-calm" id="authCompanion" data-avatar-role="auth-companion" aria-hidden="true">
                 <div class="pet-shadow"></div>
                 <div class="pet-tail"></div>
@@ -471,36 +581,16 @@
                 </div>
               </div>
 
-              <div class="auth-bubble" id="authBubble">Sunny vantar pa Dexcom-login.</div>
+              <div class="auth-bubble auth-bubble-dark" id="authBubble">Sunny vantar pa Dexcom-login.</div>
             </div>
           </div>
         </div>
 
-        <div class="range-strip">
+        <div class="range-strip range-strip-dark">
           <div class="status-chip good">4.5-7.0 mmol/L = 81-126 mg/dL: glad och okej</div>
           <div class="status-chip soft">7.5-12.0 mmol/L = 135-216 mg/dL: lite ledsen</div>
           <div class="status-chip high">Over 12 mmol/L = over 216 mg/dL: hangig</div>
           <div class="status-chip low">Under 4 mmol/L = under 72 mg/dL: somnig</div>
-        </div>
-
-        <div class="connect-card auth-connect-card">
-          <p class="integration-summary" id="authGateStatus">
-            Dexcom OAuth oppnar Dexcoms egen inloggningssida. For riktig live-data pa GitHub Pages behovs fortfarande en backend for token-utbyte.
-          </p>
-
-          <div class="auth-login-card">
-            <strong>Var skriver jag användarnamn och lösenord?</strong>
-            <p>
-              Efter klick på Dexcom-knappen öppnas Dexcoms officiella login där du fyller i ditt Dexcom-konto.
-              Den här prototypen sparar inte dina inloggningsuppgifter lokalt.
-            </p>
-          </div>
-
-          <div class="auth-actions">
-            <button class="primary-button wide" id="authDexcomButton" type="button">Oppna Dexcoms login</button>
-            <button class="secondary-button wide" id="authDemoButton" type="button">Fortsatt i demo</button>
-            <button class="ghost-button" id="authSetupButton" type="button">Konfigurera Dexcom i Profil</button>
-          </div>
         </div>
       </div>
     </section>

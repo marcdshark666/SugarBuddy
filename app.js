@@ -106,6 +106,13 @@ const elements = {
   profileEmoji: document.getElementById("profileEmoji"),
   profileBuddyName: document.getElementById("profileBuddyName"),
   profileBuddySpecies: document.getElementById("profileBuddySpecies"),
+  profileSnapshotValue: document.getElementById("profileSnapshotValue"),
+  profileSnapshotUnit: document.getElementById("profileSnapshotUnit"),
+  profileSnapshotTrend: document.getElementById("profileSnapshotTrend"),
+  profileSyncState: document.getElementById("profileSyncState"),
+  profileShareStatus: document.getElementById("profileShareStatus"),
+  profileRevealToggle: document.getElementById("profileRevealToggle"),
+  profileRevealText: document.getElementById("profileRevealText"),
   currentValue: document.getElementById("currentValue"),
   currentUnit: document.getElementById("currentUnit"),
   trendPill: document.getElementById("trendPill"),
@@ -158,13 +165,24 @@ const elements = {
   backendUrlInput: document.getElementById("backendUrlInput"),
   buildAuthButton: document.getElementById("buildAuthButton"),
   copyAuthButton: document.getElementById("copyAuthButton"),
+  removeDexcomButton: document.getElementById("removeDexcomButton"),
   authBuddyEmoji: document.getElementById("authBuddyEmoji"),
+  authBuddyCardEmoji: document.getElementById("authBuddyCardEmoji"),
   authBuddyName: document.getElementById("authBuddyName"),
   authBuddySubtitle: document.getElementById("authBuddySubtitle"),
   authCompanion: document.getElementById("authCompanion"),
   authBubble: document.getElementById("authBubble"),
   authGateMessage: document.getElementById("authGateMessage"),
   authGateStatus: document.getElementById("authGateStatus"),
+  authSnapshotValue: document.getElementById("authSnapshotValue"),
+  authSnapshotUnit: document.getElementById("authSnapshotUnit"),
+  authSnapshotTrend: document.getElementById("authSnapshotTrend"),
+  authSyncState: document.getElementById("authSyncState"),
+  authShareStatus: document.getElementById("authShareStatus"),
+  authUsernameInput: document.getElementById("authUsernameInput"),
+  authPasswordInput: document.getElementById("authPasswordInput"),
+  authPasswordToggle: document.getElementById("authPasswordToggle"),
+  authPasswordToggleText: document.getElementById("authPasswordToggleText"),
   authDexcomButton: document.getElementById("authDexcomButton"),
   authDemoButton: document.getElementById("authDemoButton"),
   authBackButton: document.getElementById("authBackButton"),
@@ -190,6 +208,67 @@ function formatGlucose(value) {
 
 function formatAverage(value) {
   return state.unit === "mgdl" ? `${Math.round(value)} mg/dL` : `${round(mgdlToMmol(value), 1).toFixed(1)} mmol/L`;
+}
+
+function getConnectionBadgeState() {
+  const backendBase = getBackendBaseUrl();
+
+  if (state.auth.status === "authorized") {
+    return {
+      sync: "Connected",
+      status: backendBase ? "Bridge live" : "OAuth klar",
+    };
+  }
+
+  if (state.auth.status === "demo" || state.dexcom.mode === "mock") {
+    return {
+      sync: "Demo",
+      status: "Mock strom",
+    };
+  }
+
+  if (backendBase) {
+    return {
+      sync: "Syncing",
+      status: "Bridge redo",
+    };
+  }
+
+  if (state.dexcom.clientId) {
+    return {
+      sync: "Syncing",
+      status: "OAuth redo",
+    };
+  }
+
+  return {
+    sync: "Idle",
+    status: "Setup",
+  };
+}
+
+function syncConnectionBadges() {
+  const badgeState = getConnectionBadgeState();
+
+  if (elements.profileSyncState) elements.profileSyncState.textContent = badgeState.sync;
+  if (elements.profileShareStatus) elements.profileShareStatus.textContent = badgeState.status;
+  if (elements.authSyncState) elements.authSyncState.textContent = badgeState.sync;
+  if (elements.authShareStatus) elements.authShareStatus.textContent = badgeState.status;
+}
+
+function setProfilePreviewVisible(visible) {
+  if (!elements.authPreview || !elements.profileRevealToggle || !elements.profileRevealText) return;
+  elements.authPreview.classList.toggle("is-hidden", !visible);
+  elements.profileRevealToggle.setAttribute("aria-pressed", visible ? "true" : "false");
+  elements.profileRevealText.textContent = visible ? "Dolj kopplingsdetaljer" : "Visa kopplingsdetaljer";
+}
+
+function setAuthPasswordPreview(revealed) {
+  if (!elements.authPasswordInput || !elements.authPasswordToggle || !elements.authPasswordToggleText) return;
+  elements.authPasswordToggle.setAttribute("aria-pressed", revealed ? "true" : "false");
+  elements.authPasswordToggleText.textContent = revealed ? "Hide password hint" : "Show my password";
+  elements.authPasswordInput.type = revealed ? "text" : "password";
+  elements.authPasswordInput.value = revealed ? "Ditt losenord skrivs hos Dexcom, inte har" : "Dexcom-login sker externt";
 }
 
 function getTrend(previousValue, currentValue) {
@@ -524,6 +603,7 @@ function renderCompanion() {
   elements.profileEmoji.textContent = companion.emoji;
   elements.profileBuddyName.textContent = companion.name;
   elements.profileBuddySpecies.textContent = companion.subtitle;
+  if (elements.authBuddyCardEmoji) elements.authBuddyCardEmoji.textContent = companion.emoji;
   elements.moodBubble.textContent = `${companion.name} ${mood.petText}`;
   elements.desktopBubble.textContent = `${companion.name} ${mood.petText}`;
   if (elements.authBubble) elements.authBubble.textContent = `${companion.name} ${mood.petText}`;
@@ -532,8 +612,15 @@ function renderCompanion() {
   elements.currentValue.textContent = formatGlucose(latest.value);
   elements.currentUnit.textContent = state.unit === "mgdl" ? "mg/dL" : "mmol/L";
   elements.trendPill.textContent = trend.label;
+  if (elements.profileSnapshotValue) elements.profileSnapshotValue.textContent = formatGlucose(latest.value);
+  if (elements.profileSnapshotUnit) elements.profileSnapshotUnit.textContent = state.unit === "mgdl" ? "mg/dL" : "mmol/L";
+  if (elements.profileSnapshotTrend) elements.profileSnapshotTrend.textContent = trend.short;
+  if (elements.authSnapshotValue) elements.authSnapshotValue.textContent = formatGlucose(latest.value);
+  if (elements.authSnapshotUnit) elements.authSnapshotUnit.textContent = state.unit === "mgdl" ? "mg/dL" : "mmol/L";
+  if (elements.authSnapshotTrend) elements.authSnapshotTrend.textContent = trend.short;
   elements.lastSync.textContent = formatRelativeTime(latest.time);
   elements.streakValue.textContent = `${streakMinutes} min`;
+  syncConnectionBadges();
 
   renderNeeds(mood.statusKey, latest.value, streakMinutes);
   renderInsights();
@@ -558,9 +645,18 @@ function updateAuthGate() {
   const companion = companions[state.selectedCompanion];
   const backendBase = getBackendBaseUrl();
   elements.authBuddyEmoji.textContent = companion.emoji;
+  if (elements.authBuddyCardEmoji) elements.authBuddyCardEmoji.textContent = companion.emoji;
   elements.authBuddyName.textContent = companion.name;
   elements.authBuddySubtitle.textContent = companion.subtitle;
-  elements.authDexcomButton.textContent = backendBase || state.dexcom.clientId ? "Oppna Dexcoms login" : "Forbered Dexcom-login";
+  if (elements.authUsernameInput) {
+    elements.authUsernameInput.value = backendBase
+      ? "Fortsatt via inbyggd Dexcom bridge"
+      : state.dexcom.clientId
+        ? "Dexcom OAuth oppnas i nasta steg"
+        : "Fylls i pa Dexcoms egen sida";
+  }
+  elements.authDexcomButton.textContent = backendBase || state.dexcom.clientId ? "Logga in med Dexcom Share" : "Forbered Dexcom-login";
+  syncConnectionBadges();
 
   if (state.auth.status === "authorized") {
     elements.authGateMessage.textContent =
@@ -785,10 +881,13 @@ function renderDexcomPanel() {
   elements.clientIdInput.value = state.dexcom.clientId;
   elements.redirectUriInput.value = state.dexcom.redirectUri;
   elements.backendUrlInput.value = state.dexcom.backendUrl;
+  elements.buildAuthButton.textContent = backendBase ? "Restart bridge" : "Restart";
+  elements.copyAuthButton.textContent = backendBase ? "Kopiera bridge-lank" : "Kopiera lank";
   elements.modeButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.mode === state.dexcom.mode);
   });
   elements.authPreview.textContent = backendBase ? buildDexcomStartUrl() : buildDexcomAuthUrl();
+  syncConnectionBadges();
 
   if (state.dexcom.mode === "mock") {
     elements.integrationSummary.textContent = "Demo-läge visar en mockad Dexcom-ström och låter dig trimma buddy-reaktionerna utan att logga in.";
@@ -995,6 +1094,13 @@ function bindEvents() {
     showOnboarding(true);
   });
 
+  if (elements.authPasswordToggle) {
+    elements.authPasswordToggle.addEventListener("click", () => {
+      const revealed = elements.authPasswordToggle.getAttribute("aria-pressed") !== "true";
+      setAuthPasswordPreview(revealed);
+    });
+  }
+
   elements.authDemoButton.addEventListener("click", () => {
     state.auth.status = "demo";
     state.auth.lastProvider = "demo";
@@ -1080,10 +1186,12 @@ function bindEvents() {
 
   elements.buildAuthButton.addEventListener("click", () => {
     elements.authPreview.textContent = hasBackendBridge() ? buildDexcomStartUrl() : buildDexcomAuthUrl();
+    setProfilePreviewVisible(true);
   });
 
   elements.copyAuthButton.addEventListener("click", async () => {
     const link = hasBackendBridge() ? buildDexcomStartUrl() : buildDexcomAuthUrl();
+    setProfilePreviewVisible(true);
     try {
       await navigator.clipboard.writeText(link);
       elements.integrationSummary.textContent = "OAuth-länken är kopierad till urklipp.";
@@ -1091,6 +1199,34 @@ function bindEvents() {
       elements.integrationSummary.textContent = "Kopiering misslyckades i denna miljö, men länken visas i rutan nedanför.";
     }
   });
+
+  if (elements.profileRevealToggle) {
+    elements.profileRevealToggle.addEventListener("click", () => {
+      const visible = elements.profileRevealToggle.getAttribute("aria-pressed") !== "true";
+      setProfilePreviewVisible(visible);
+    });
+  }
+
+  if (elements.removeDexcomButton) {
+    elements.removeDexcomButton.addEventListener("click", () => {
+      state.dexcom = {
+        ...state.dexcom,
+        mode: "mock",
+        clientId: "",
+        redirectUri: "",
+        backendUrl: "",
+        region: "EU",
+        environment: "sandbox",
+      };
+      state.auth.status = "locked";
+      state.auth.lastProvider = "demo";
+      saveAuthState();
+      setProfilePreviewVisible(false);
+      saveDexcomState();
+      elements.integrationSummary.textContent = "Dexcom-kopplingen ar rensad. Demo-laget ar aktivt igen.";
+      updateAuthGate();
+    });
+  }
 
   document.addEventListener("click", (event) => {
     const clickedInside = event.target.closest(".fab, .quick-actions, .soft-action");
@@ -1109,6 +1245,8 @@ function bindEvents() {
 
 async function init() {
   handleDexcomReturn();
+  setProfilePreviewVisible(false);
+  setAuthPasswordPreview(false);
   elements.unitButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.unit === state.unit);
   });
